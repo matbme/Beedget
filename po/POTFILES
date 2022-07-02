@@ -1,0 +1,6 @@
+data/com.github.matbme.beedget.desktop.in
+data/com.github.matbme.beedget.appdata.xml.in
+data/com.github.matbme.beedget.gschema.xml
+src/window.ui
+src/help-overlay.ui
+src/empty_dialog.ui

@@ -1,0 +1,41 @@
+[package]
+name = "beedget"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+rand = "0.8.5"
+emojis = "0.4.0"
+once_cell = "1.12.0"
+derivative = "2.2"
+
+[dependencies.gettextrs]
+package = "gettext-rs"
+version = "0.7"
+features = ["gettext-system"]
+
+[dependencies.gtk]
+package = "gtk4"
+version = "0.4.8"
+
+[dependencies.adw]
+package = "libadwaita"
+version  = "0.1.1"
+
+[dependencies.serde]
+version = "1.0"
+features = ["derive"]
+
+[dependencies.serde_json]
+version = "1.0"
+
+[dependencies.uuid]
+version = "1.1.2"
+features = ["serde", "v4", "fast-rng"]
+
+[dependencies.chrono]
+version = "0.4"
+features = ["serde"]
+
+[dependencies.anyhow]
+version = "1.0"

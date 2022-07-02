@@ -1,0 +1,29 @@
+using Gtk 4.0;
+using Adw 1;
+
+template GroupListRowContent : ListBoxRow {
+  child: Box {
+    orientation: horizontal;
+    width-request: 200;
+
+    Overlay overlay {
+      width-request: 40;
+      margin-top: 2;
+      margin-bottom: 2;
+      halign: center;
+
+      DrawingArea icon {
+      }
+    }
+
+    Label name {
+      margin-start: 3;
+      justify: left;
+    }
+  };
+}
+
+Label icon_emoji {
+  styles ["title-4"]
+  justify: center;
+}

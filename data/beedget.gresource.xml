@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/com/github/matbme/beedget">
+    <file>ui/create-group-dialog.ui</file>
+    <file>ui/empty-dialog.ui</file>
+    <file>ui/group-list-row-content.ui</file>
+    <file>ui/help-overlay.ui</file>
+    <file>ui/window.ui</file>
+  </gresource>
+</gresources>

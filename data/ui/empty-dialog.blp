@@ -1,0 +1,17 @@
+using Gtk 4.0;
+
+template EmptyDialog : Box {
+  orientation: vertical;
+  spacing: 20;
+  valign: center;
+
+  Label title {
+    styles ["title-1"]
+    label: _("There’s nothing here");
+  }
+
+  Label heading {
+    styles ["heading"]
+    label: _("Press the “Add...” button to create your first entry");
+  }
+}

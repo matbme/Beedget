@@ -1,0 +1,76 @@
+using Gtk 4.0;
+using Adw 1;
+
+template BeedgetWindow : Adw.ApplicationWindow {
+  default-width: 800;
+  default-height: 600;
+
+  Box {
+    orientation: vertical;
+
+    Adw.HeaderBar header_bar {
+      [start]
+      Adw.SplitButton {
+        icon-name: "list-add-symbolic";
+        menu-model: add_menu;
+      }
+
+      [title]
+      Label {
+          styles ["title"]
+          single-line-mode: true;
+
+          label: _("Beedget");
+      }
+
+      [end]
+      MenuButton {
+        icon-name: "open-menu-symbolic";
+        menu-model: primary_menu;
+      }
+    }
+
+    Adw.Leaflet pane {
+      vexpand: true;
+
+      ListBox sidebar {
+        styles ["navigation-sidebar"]
+      }
+
+      Separator {}
+
+      Box content {
+        hexpand: true;
+        halign: center;
+      }
+    }
+  }
+}
+
+menu primary_menu {
+  section {
+    item {
+      label: _("Preferences");
+      action: "app.preferences";
+    }
+
+    item {
+      label: _("Keyboard Shortcuts");
+      action: "win.show-help-overlay";
+    }
+
+    item {
+      label: _("About beedget");
+      action: "app.about";
+    }
+  }
+}
+
+menu add_menu {
+  section {
+    item {
+      label: _("Group");
+      action: "win.open-create-group-dialog";
+    }
+  }
+}

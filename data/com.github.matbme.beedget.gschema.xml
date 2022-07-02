@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="beedget">
+	<schema id="com.github.matbme.beedget" path="/com/github/matbme/beedget/">
+        <key name="save-path" type="s">
+            <default>''</default>
+            <summary>Save path</summary>
+            <description>Path to directory where application data should be saved</description>
+        </key>
+	</schema>
+</schemalist>

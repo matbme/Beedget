@@ -1,0 +1,98 @@
+using Gtk 4.0;
+using Adw 1;
+
+template CreateGroupDialog : Adw.Window {
+  modal: true;
+  default-width: 400;
+
+  Box {
+    orientation: vertical;
+
+    Adw.HeaderBar {
+      show-end-title-buttons: false;
+
+      [start]
+      Button cancel_button {
+        label: _("Cancel");
+        clicked => close_window() swapped;
+      }
+
+      [title]
+      Label {
+        styles ["heading"]
+        label: _("New group");
+      }
+
+      [end]
+      Button add_button {
+        styles ["suggested-action"]
+        label: _("Create");
+        clicked => create_group() swapped;
+      }
+    }
+
+    Box {
+      orientation: vertical;
+      spacing: 5;
+
+      margin-start: 10;
+      margin-end: 10;
+      margin-top: 10;
+      margin-bottom: 10;
+
+      Label {
+        styles ["heading"]
+        halign: start;
+        label: _("Group information");
+      }
+
+      Entry group_name {
+        hexpand: true;
+        secondary-icon-name: "document-edit-symbolic";
+        placeholder-text: _("Name");
+      }
+
+      Label {
+        styles ["heading"]
+        halign: start;
+        margin-top: 20;
+        label: _("Group style");
+      }
+
+      Box {
+        orientation: horizontal;
+        homogeneous: true;
+        spacing: 30;
+
+        Box {
+          spacing: 15;
+
+          Label {
+            label: _("Color:");
+          }
+
+          ColorButton group_color {
+            modal: true;
+            hexpand: true;
+            title: _("Select group color");
+          }
+        }
+
+        Box{
+          spacing: 15;
+
+          Label {
+            styles ["title"]
+            justify: right;
+            label: _("Icon:");
+          }
+
+          Button group_icon_picker_button {
+            hexpand: false;
+            clicked => present_group_icon_picker() swapped;
+          }
+        }
+      }
+    }
+  }
+}
