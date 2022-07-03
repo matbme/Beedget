@@ -49,6 +49,8 @@ mod imp {
         fn constructed(&self, obj: &Self::Type) {
             self.parent_constructed(obj);
             obj.setup_gactions();
+
+            obj.connect_init_sidebar();
         }
     }
 
@@ -78,15 +80,19 @@ impl BeedgetWindow {
             win.show_create_group_dialog();
         }));
         self.add_action(&open_create_group_dialog_action);
-
-        self.connect_application_notify(clone!(@weak self as win => move |_| {
-            win.init_sidebar();
-        }));
     }
 
     fn show_create_group_dialog(&self) {
         let dialog = CreateGroupDialog::new(self.upcast_ref());
         dialog.present();
+    }
+
+    /// Window only receives application after construction, so we wait to
+    /// initialize content when we're sure it has been set.
+    fn connect_init_sidebar(&self) {
+        self.connect_application_notify(clone!(@weak self as win => move |_| {
+            win.init_sidebar();
+        }));
     }
 
     fn init_sidebar(&self) {

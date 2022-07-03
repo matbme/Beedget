@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, CompositeTemplate};
+use gtk::{gdk, glib, CompositeTemplate};
 use gtk::gdk::RGBA;
 
 use adw::subclass::window::AdwWindowImpl;
@@ -57,11 +57,16 @@ mod imp {
         fn constructed(&self, obj: &Self::Type) {
             self.parent_constructed(obj);
 
+            // Random color
             let mut rng = rand::thread_rng();
             self.group_color.set_rgba(&RGBA::new(rng.gen(), rng.gen(), rng.gen(), 1.0));
 
+            // Random emoji
             let random_emoji = emojis::iter().choose(&mut rng).unwrap();
             self.group_icon_picker_button.set_label(random_emoji.as_str());
+
+            obj.connect_key_event_controller();
+            obj.connect_add_button_to_entry_size();
         }
     }
     impl WidgetImpl for CreateGroupDialog {}
@@ -72,7 +77,8 @@ mod imp {
 glib::wrapper! {
     pub struct CreateGroupDialog(ObjectSubclass<imp::CreateGroupDialog>)
         @extends gtk::Window, gtk::Widget,
-        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Native, gtk::Root, gtk::ShortcutManager;
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget,
+                    gtk::Native, gtk::Root, gtk::ShortcutManager;
 }
 
 #[gtk::template_callbacks]
@@ -125,5 +131,32 @@ impl CreateGroupDialog {
         }));
 
         emoji_picker.popup();
+    }
+
+    /// Disables button if name entry is empty
+    fn connect_add_button_to_entry_size(&self) {
+        // Set initial
+        self.imp().add_button.set_sensitive(self.imp().group_name.text_length() > 0);
+
+        // Subscribe to changes
+        self.imp().group_name.buffer().connect_length_notify(glib::clone!(@weak self as parent => move |_| {
+            parent.imp().add_button.set_sensitive(parent.imp().group_name.text_length() > 0);
+        }));
+    }
+
+    /// Handle keyboard events
+    fn connect_key_event_controller(&self) {
+        let key_controller = gtk::EventControllerKey::new();
+        key_controller.connect_key_pressed(glib::clone!(@strong self as parent => move |_, keyval, _, _| {
+            match keyval {
+                gdk::Key::Escape => { // Esc closes dialog
+                    parent.destroy();
+                    gtk::Inhibit(true)
+                }
+                _ => { gtk::Inhibit(false) }
+            }
+        }));
+
+        self.add_controller(&key_controller);
     }
 }
