@@ -11,6 +11,7 @@ use emojis;
 use rand::prelude::*;
 
 use crate::models::*;
+use beedget::app_data;
 
 mod imp {
     use super::*;
@@ -89,15 +90,18 @@ impl CreateGroupDialog {
 
     #[template_callback]
     fn create_group(&self) {
-        let window = self.transient_for().unwrap();
-        let application = window.application().unwrap();
-        let beedget_application = application.downcast_ref::<crate::BeedgetApplication>().unwrap();
-        let app_data = beedget_application.imp().data.get().unwrap();
+        app_data!(|data| {
+            let group = Group::new(
+                &self.imp().current_emoji.borrow(),
+                self.imp().group_color.rgba(),
+                &self.imp().group_name.text()
+            );
 
-        match app_data.new_group(Group::new(&self.imp().current_emoji.borrow(), self.imp().group_color.rgba(), &self.imp().group_name.text())) {
-            Ok(()) => { self.destroy(); }
-            Err(error) => { panic!("{}", error); }
-        }
+            match data.new_group(group) {
+                Ok(()) => { self.destroy(); }
+                Err(error) => { panic!("{}", error); }
+            }
+        });
     }
 
     #[template_callback]

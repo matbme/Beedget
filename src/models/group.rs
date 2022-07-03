@@ -29,4 +29,13 @@ impl Group {
             transactions: vec![]
         }
     }
+
+    pub fn rgba_color(&self) -> RGBA {
+        RGBA::new(
+            self.color[0],
+            self.color[1],
+            self.color[2],
+            self.color[3]
+        )
+    }
 }

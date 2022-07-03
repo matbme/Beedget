@@ -23,6 +23,7 @@ rust_sources = files(
   'config.rs',
   'dialogs/create_group_dialog.rs',
   'dialogs/mod.rs',
+  'lib.rs',
   'main.rs',
   'models/data_object.rs',
   'models/group.rs',

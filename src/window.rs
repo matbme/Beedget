@@ -2,13 +2,14 @@ use glib::clone;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gio, glib, CompositeTemplate};
-use gtk::gdk::RGBA;
 
 use adw::subclass::application_window::AdwApplicationWindowImpl;
 
 use crate::widgets::*;
 use crate::dialogs::*;
 use crate::models::*;
+
+use beedget::app_data;
 
 mod imp {
     use super::*;
@@ -89,42 +90,40 @@ impl BeedgetWindow {
     }
 
     fn init_sidebar(&self) {
-        let application = self.application().unwrap();
-        let beedget_application = application.downcast_ref::<crate::BeedgetApplication>().unwrap();
-        let app_data = beedget_application.imp().data.get().unwrap();
-
-        for group in app_data.groups.borrow().iter() {
-            let color = RGBA::new(group.color[0], group.color[1], group.color[2], group.color[3]);
-            let row = GroupListRowContent::new(
-                &group.emoji,
-                &color,
-                &group.name
-            );
-            self.imp().sidebar.append(&row);
-        }
+        app_data!(|data| {
+            for group in data.groups.borrow().iter() {
+                let row = GroupListRowContent::new(
+                    &group.emoji,
+                    &group.rgba_color(),
+                    &group.name
+                );
+                self.imp().sidebar.append(&row);
+            }
+        });
 
         let empty_dialog = EmptyDialog::new();
         self.imp().content.append(&empty_dialog);
 
         // Callbacks for updating sidebar when a group changes
-        app_data.add_group_update_callback(clone!(@weak self as parent => move |group, update_type| {
-            match update_type {
-                UpdateType::Added => {
-                    let color = RGBA::new(group.color[0], group.color[1], group.color[2], group.color[3]);
-                    let row = GroupListRowContent::new(
-                        &group.emoji,
-                        &color,
-                        &group.name
-                    );
-                    parent.imp().sidebar.append(&row);
-                }
-                UpdateType::Removed => {
+        app_data!(|data| {
+            data.add_group_update_callback(clone!(@weak self as parent => move |group, update_type| {
+                match update_type {
+                    UpdateType::Added => {
+                        let row = GroupListRowContent::new(
+                            &group.emoji,
+                            &group.rgba_color(),
+                            &group.name
+                        );
+                        parent.imp().sidebar.append(&row);
+                    }
+                    UpdateType::Removed => {
 
-                }
-                UpdateType::Changed => {
+                    }
+                    UpdateType::Changed => {
 
+                    }
                 }
-            }
-        }));
+            }));
+        });
     }
 }
