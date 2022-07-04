@@ -43,6 +43,7 @@ endif
 blueprints = custom_target('blueprints',
   input: files(
     'ui/create-group-dialog.blp',
+    'ui/create-transaction-dialog.blp',
     'ui/empty-dialog.blp',
     'ui/group-list-row-content.blp',
     'ui/window.blp',

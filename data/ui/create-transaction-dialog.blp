@@ -1,0 +1,60 @@
+using Gtk 4.0;
+using Adw 1;
+
+template CreateTransactionDialog : Adw.Window {
+  modal: true;
+  default-width: 400;
+
+  Box {
+    orientation: vertical;
+
+    Adw.HeaderBar {
+      show-end-title-buttons: false;
+
+      [start]
+      Button cancel_button {
+        label: _("Cancel");
+        clicked => close_window() swapped;
+      }
+
+      [title]
+      Label {
+        styles ["heading"]
+        label: _("New transaction");
+      }
+
+      [end]
+      Button add_button {
+        styles ["suggested-action"]
+        label: _("Create");
+        clicked => create_transaction() swapped;
+      }
+    }
+
+    Box {
+      orientation: vertical;
+      spacing: 5;
+
+      margin-start: 10;
+      margin-end: 10;
+      margin-top: 10;
+      margin-bottom: 10;
+
+      Label {
+        styles ["heading"]
+        halign: start;
+        label: _("Transaction information");
+      }
+
+      Entry transaction_name {
+        hexpand: true;
+        secondary-icon-name: "document-edit-symbolic";
+        placeholder-text: _("Name");
+      }
+
+      DropDown group_select {
+        enable-search: true;
+      }
+    }
+  }
+}
