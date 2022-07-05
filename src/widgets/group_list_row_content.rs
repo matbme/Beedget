@@ -1,6 +1,6 @@
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, CompositeTemplate};
+use gtk::{glib, CompositeTemplate, SignalListItemFactory, PropertyExpression};
 use gtk::gdk::RGBA;
 use gtk::cairo::{LineJoin, LinearGradient};
 use glib::{ParamFlags, ParamSpec, ParamSpecString};
@@ -153,6 +153,41 @@ impl GroupListRowContent {
             .expect("Failed to create `GroupListRowContent`.")
     }
 
+    pub fn factory() -> SignalListItemFactory {
+        let group_factory = gtk::SignalListItemFactory::new();
+
+        group_factory.connect_setup(move |_, list_item| {
+            let row = GroupListRowContent::empty();
+
+            list_item.set_child(Some(&row));
+
+            list_item
+                .property_expression("item")
+                .chain_property::<GroupListRowContent>("emoji")
+                .bind(&row, "emoji", gtk::Widget::NONE);
+
+            list_item
+                .property_expression("item")
+                .chain_property::<GroupListRowContent>("color")
+                .bind(&row, "color", gtk::Widget::NONE);
+
+            list_item
+                .property_expression("item")
+                .chain_property::<GroupListRowContent>("label")
+                .bind(&row, "label", gtk::Widget::NONE);
+        });
+
+        group_factory
+    }
+
+    pub fn search_expression() -> PropertyExpression {
+        PropertyExpression::new(
+            GroupListRowContent::static_type(),
+            gtk::Expression::NONE,
+            "label"
+        )
+    }
+
     fn connect_property_changes(&self) {
         self.connect_notify_local(Some("emoji"), move |instance, _| {
             instance.set_icon_emoji();
@@ -209,7 +244,7 @@ impl GroupListRowContent {
 
             force!(ctx.save());
 
-            ctx.arc(width / 2.0,    // x
+            ctx.arc(width / 2.0,     // x
                     height / 2.0,    // y
                     height / 2.0,    // radius
                     0.0,

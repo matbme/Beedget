@@ -2,9 +2,7 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gdk, gio, glib, CompositeTemplate};
 
-use adw::prelude::*;
 use adw::subclass::window::AdwWindowImpl;
-use adw::Bin;
 
 use crate::widgets::*;
 use beedget::app_data;
@@ -112,7 +110,6 @@ impl CreateTransactionDialog {
 
     fn populate_group_select_dropdown(&self) {
         let model = gio::ListStore::new(GroupListRowContent::static_type());
-
         app_data!(|data| {
             for group in data.groups.borrow().iter() {
                 let row = GroupListRowContent::new(
@@ -124,29 +121,8 @@ impl CreateTransactionDialog {
             }
         });
 
-        let group_factory = gtk::SignalListItemFactory::new();
-
-        group_factory.connect_setup(move |_, list_item| {
-            let row = GroupListRowContent::empty();
-            list_item.set_child(Some(&row));
-
-            list_item
-                .property_expression("item")
-                .chain_property::<GroupListRowContent>("label")
-                .bind(&row, "label", gtk::Widget::NONE);
-
-            list_item
-                .property_expression("item")
-                .chain_property::<GroupListRowContent>("emoji")
-                .bind(&row, "emoji", gtk::Widget::NONE);
-
-            list_item
-                .property_expression("item")
-                .chain_property::<GroupListRowContent>("color")
-                .bind(&row, "color", gtk::Widget::NONE);
-        });
-
-        self.imp().group_select.set_factory(Some(&group_factory));
+        self.imp().group_select.set_factory(Some(&GroupListRowContent::factory()));
         self.imp().group_select.set_model(Some(&model));
+        self.imp().group_select.set_expression(Some(&GroupListRowContent::search_expression()));
     }
 }
