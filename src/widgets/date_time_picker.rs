@@ -206,6 +206,9 @@ impl DateTimePicker {
                 };
 
                 parent.imp().selected_date.replace(new_date);
+                parent.imp().date_entry.remove_css_class("error");
+            } else {
+                parent.imp().date_entry.add_css_class("error");
             }
         }));
     }
@@ -225,9 +228,12 @@ impl DateTimePicker {
                         current_date.minute(),
                         current_date.seconds()
                     )
-                } { parent.imp().selected_date.replace(new_date); }
+                } {
+                    parent.imp().selected_date.replace(new_date);
+                    parent.imp().hour_value.remove_css_class("error");
+                }
                 else {
-                    // TODO: Set error CSS
+                    parent.imp().hour_value.add_css_class("error")
                 }
             }
         }));
@@ -248,9 +254,12 @@ impl DateTimePicker {
                         value,
                         current_date.seconds()
                     )
-                } { parent.imp().selected_date.replace(new_date); }
+                } {
+                    parent.imp().selected_date.replace(new_date);
+                    parent.imp().minute_value.remove_css_class("error");
+                }
                 else {
-                    // TODO: Set error CSS
+                    parent.imp().minute_value.add_css_class("error")
                 }
             }
         }));
