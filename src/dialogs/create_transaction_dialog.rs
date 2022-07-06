@@ -24,6 +24,9 @@ mod imp {
 
         #[template_child]
         pub group_select: TemplateChild<gtk::DropDown>,
+
+        #[template_child]
+        pub dt_picker: TemplateChild<DateTimePicker>
     }
 
     #[glib::object_subclass]

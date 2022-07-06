@@ -3,6 +3,7 @@
   <gresource prefix="/com/github/matbme/beedget">
     <file>ui/create-group-dialog.ui</file>
     <file>ui/create-transaction-dialog.ui</file>
+    <file>ui/date-time-picker.ui</file>
     <file>ui/empty-dialog.ui</file>
     <file>ui/group-list-row-content.ui</file>
     <file>ui/help-overlay.ui</file>

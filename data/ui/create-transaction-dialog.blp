@@ -55,6 +55,17 @@ template CreateTransactionDialog : Adw.Window {
       DropDown group_select {
         enable-search: true;
       }
+
+      Label {
+        styles ["heading"]
+        margin-top: 10;
+        halign: start;
+        label: _("Time");
+      }
+
+      .DateTimePicker dt_picker {
+        halign: center;
+      }
     }
   }
 }

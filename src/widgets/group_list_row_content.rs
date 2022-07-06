@@ -258,14 +258,15 @@ impl GroupListRowContent {
     }
 
     fn set_label(&self) {
-        let label = self.imp().label.borrow().as_ref().unwrap().clone();
-        self.imp().name.set_label(&label);
+        if let Some(label) = self.imp().label.borrow().as_ref() {
+            self.imp().name.set_label(&label);
+        }
     }
 
     fn set_icon_emoji(&self) {
-        let icon = self.imp().emoji.borrow().as_ref().unwrap().clone();
-        self.imp().icon_emoji.set_label(&icon);
-
-        self.imp().overlay.add_overlay(self.imp().icon_emoji.upcast_ref::<gtk::Label>());
+        if let Some(icon) = self.imp().emoji.borrow().as_ref() {
+            self.imp().icon_emoji.set_label(&icon);
+            self.imp().overlay.add_overlay(self.imp().icon_emoji.upcast_ref::<gtk::Label>());
+        }
     }
 }
