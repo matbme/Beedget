@@ -60,6 +60,7 @@ gnome.compile_resources('beedget',
   dependencies: blueprints,
   install: true,
   install_dir: pkgdatadir,
+  source_dir: ['icons/symbolic/scalable/actions']
 )
 
 subdir('icons')

@@ -66,6 +66,31 @@ template CreateTransactionDialog : Adw.Window {
       .DateTimePicker dt_picker {
         halign: center;
       }
+
+      Label {
+        styles ["heading"]
+        margin-top: 10;
+        halign: start;
+        label: _("Value");
+      }
+
+      Box {
+        orientation: horizontal;
+        spacing: 5;
+
+        Box {
+          styles ["linked"]
+          orientation: horizontal;
+
+          Button {
+            icon-name: "expense-symbolic";
+          }
+
+          Button {
+            icon-name: "income-symbolic";
+          }
+        }
+      }
     }
   }
 }

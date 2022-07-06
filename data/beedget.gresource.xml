@@ -9,4 +9,8 @@
     <file>ui/help-overlay.ui</file>
     <file>ui/window.ui</file>
   </gresource>
+  <gresource prefix="/com/github/matbme/beedget/icons/scalable/actions">
+      <file alias="expense-symbolic.svg">icons/symbolic/scalable/actions/expense-symbolic.svg</file>
+    <file alias="income-symbolic.svg">icons/symbolic/scalable/actions/income-symbolic.svg</file>
+  </gresource>
 </gresources>
