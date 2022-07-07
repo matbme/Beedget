@@ -13,6 +13,7 @@ template BeedgetWindow : Adw.ApplicationWindow {
       Adw.SplitButton {
         icon-name: "list-add-symbolic";
         menu-model: add_menu;
+        clicked => open_create_transaction_dialog() swapped;
       }
 
       [title]
@@ -68,6 +69,10 @@ menu primary_menu {
 
 menu add_menu {
   section {
+    item {
+      label: _("Transaction");
+      action: "win.open-create-transaction-dialog";
+    }
     item {
       label: _("Group");
       action: "win.open-create-group-dialog";

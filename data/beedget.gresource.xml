@@ -2,9 +2,16 @@
 <gresources>
   <gresource prefix="/com/github/matbme/beedget">
     <file>ui/create-group-dialog.ui</file>
+    <file>ui/create-transaction-dialog.ui</file>
+    <file>ui/date-time-picker.ui</file>
     <file>ui/empty-dialog.ui</file>
     <file>ui/group-list-row-content.ui</file>
     <file>ui/help-overlay.ui</file>
     <file>ui/window.ui</file>
+  </gresource>
+  <gresource prefix="/com/github/matbme/beedget/icons/scalable/actions">
+    <file alias="expense-symbolic.svg">icons/symbolic/scalable/actions/expense-symbolic.svg</file>
+    <file alias="income-symbolic.svg">icons/symbolic/scalable/actions/income-symbolic.svg</file>
+    <file alias="money-symbolic.svg">icons/symbolic/scalable/actions/money-symbolic.svg</file>
   </gresource>
 </gresources>

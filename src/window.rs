@@ -38,6 +38,7 @@ mod imp {
 
         fn class_init(klass: &mut Self::Class) {
             Self::bind_template(klass);
+            Self::Type::bind_template_callbacks(klass);
         }
 
         fn instance_init(obj: &glib::subclass::InitializingObject<Self>) {
@@ -68,10 +69,17 @@ glib::wrapper! {
                     gtk::Root, gtk::ShortcutManager;
 }
 
+#[gtk::template_callbacks]
 impl BeedgetWindow {
     pub fn new<P: glib::IsA<gtk::Application>>(application: &P) -> Self {
         glib::Object::new(&[("application", application)])
             .expect("Failed to create BeedgetWindow")
+    }
+
+    #[template_callback]
+    fn open_create_transaction_dialog(&self) {
+        let dialog = CreateTransactionDialog::new(self.upcast_ref());
+        dialog.present();
     }
 
     fn setup_gactions(&self) {
@@ -80,6 +88,12 @@ impl BeedgetWindow {
             win.show_create_group_dialog();
         }));
         self.add_action(&open_create_group_dialog_action);
+
+        let open_create_transaction_dialog_action = gio::SimpleAction::new("open-create-transaction-dialog", None);
+        open_create_transaction_dialog_action.connect_activate(clone!(@weak self as win => move |_, _| {
+            win.open_create_transaction_dialog();
+        }));
+        self.add_action(&open_create_transaction_dialog_action);
     }
 
     fn show_create_group_dialog(&self) {

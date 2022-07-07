@@ -1,18 +1,20 @@
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, CompositeTemplate};
+use gtk::{glib, CompositeTemplate, SignalListItemFactory, PropertyExpression};
 use gtk::gdk::RGBA;
 use gtk::cairo::{LineJoin, LinearGradient};
 use glib::{ParamFlags, ParamSpec, ParamSpecString};
 
-use once_cell::sync::{Lazy, OnceCell};
+use once_cell::sync::Lazy;
 
 use std::f64::consts::PI;
+use std::cell::RefCell;
 
 use crate::force;
 
 mod imp {
     use super::*;
+
 
     #[derive(Debug, Default, CompositeTemplate)]
     #[template(resource = "/com/github/matbme/beedget/ui/group-list-row-content.ui")]
@@ -29,16 +31,16 @@ mod imp {
         #[template_child]
         pub name: TemplateChild<gtk::Label>,
 
-        pub emoji: OnceCell<String>,
-        pub color: OnceCell<RGBA>,
-        pub label: OnceCell<String>
+        pub emoji: RefCell<Option<String>>,
+        pub color: RefCell<Option<RGBA>>,
+        pub label: RefCell<Option<String>>
     }
 
     #[glib::object_subclass]
     impl ObjectSubclass for GroupListRowContent {
         const NAME: &'static str = "GroupListRowContent";
         type Type = super::GroupListRowContent;
-        type ParentType = gtk::ListBoxRow;
+        type ParentType = gtk::Box;
 
         fn class_init(klass: &mut Self::Class) {
             Self::bind_template(klass);
@@ -57,21 +59,21 @@ mod imp {
                     "emoji",
                     "emoji",
                     None,
-                    ParamFlags::CONSTRUCT_ONLY | ParamFlags::READWRITE
+                    ParamFlags::CONSTRUCT | ParamFlags::READWRITE
                 ),
                 ParamSpecString::new(
                     "color",
                     "color",
                     "color",
                     None,
-                    ParamFlags::CONSTRUCT_ONLY | ParamFlags::READWRITE
+                    ParamFlags::CONSTRUCT | ParamFlags::READWRITE
                 ),
                 ParamSpecString::new(
                     "label",
                     "label",
                     "label",
                     None,
-                    ParamFlags::CONSTRUCT_ONLY | ParamFlags::READWRITE
+                    ParamFlags::CONSTRUCT | ParamFlags::READWRITE
                 )]
             });
 
@@ -81,16 +83,19 @@ mod imp {
         fn set_property(&self, _obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
             match pspec.name() {
                 "emoji" => {
-                    let input = value.get().expect("Invalid emoji for group");
-                    force!(self.emoji.set(input));
+                    if let Ok(input) = value.get() {
+                        self.emoji.replace(input);
+                    }
                 }
                 "color" => {
-                    let input = value.get().expect("Invalid color for group");
-                    force!(self.color.set(RGBA::parse(input).unwrap()));
+                    if let Ok(input) = value.get() {
+                        self.color.replace(Some(RGBA::parse(input).unwrap()));
+                    }
                 }
                 "label" => {
-                    let input = value.get().expect("Invalid label for group");
-                    force!(self.label.set(input));
+                    if let Ok(input) = value.get() {
+                        self.label.replace(input);
+                    }
                 }
                 _ => unimplemented!()
             }
@@ -98,9 +103,9 @@ mod imp {
 
         fn property(&self, _obj: &Self::Type, _id: usize, pspec: &ParamSpec) -> glib::Value {
             match pspec.name() {
-                "emoji" => self.emoji.get().to_value(),
-                "color" => self.color.get().to_value(),
-                "label" => self.label.get().to_value(),
+                "emoji" => self.emoji.borrow().to_value(),
+                "color" => self.color.borrow().unwrap().to_str().to_value(),
+                "label" => self.label.borrow().to_value(),
                 _ => unimplemented!()
             }
         }
@@ -108,22 +113,30 @@ mod imp {
         fn constructed(&self, obj: &Self::Type) {
             self.parent_constructed(obj);
 
-            obj.set_draw_func();
-            obj.imp().icon.queue_draw();
+            if self.emoji.borrow().is_some() {
+                obj.set_icon_emoji();
+            }
 
-            obj.set_label();
-            obj.set_icon_emoji();
+            if self.color.borrow().is_some() {
+                obj.set_draw_func();
+            }
+
+            if self.label.borrow().is_some() {
+                obj.set_label();
+            }
+
+            obj.connect_property_changes();
         }
     }
 
     impl WidgetImpl for GroupListRowContent {}
-    impl ListBoxRowImpl for GroupListRowContent {}
+    impl BoxImpl for GroupListRowContent {}
 }
 
 glib::wrapper! {
     pub struct GroupListRowContent(ObjectSubclass<imp::GroupListRowContent>)
         @extends gtk::Widget,
-        @implements gtk::Accessible, gtk::Actionable, gtk::Buildable, gtk::ConstraintTarget;
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
 }
 
 impl GroupListRowContent {
@@ -133,6 +146,58 @@ impl GroupListRowContent {
             ("color", &color.to_str()),
             ("label", &String::from(label)),
         ]).expect("Failed to create `GroupListRowContent`.")
+    }
+
+    pub fn empty() -> Self {
+        glib::Object::new(&[])
+            .expect("Failed to create `GroupListRowContent`.")
+    }
+
+    pub fn factory() -> SignalListItemFactory {
+        let group_factory = gtk::SignalListItemFactory::new();
+
+        group_factory.connect_setup(move |_, list_item| {
+            let row = GroupListRowContent::empty();
+
+            list_item.set_child(Some(&row));
+
+            list_item
+                .property_expression("item")
+                .chain_property::<GroupListRowContent>("emoji")
+                .bind(&row, "emoji", gtk::Widget::NONE);
+
+            list_item
+                .property_expression("item")
+                .chain_property::<GroupListRowContent>("color")
+                .bind(&row, "color", gtk::Widget::NONE);
+
+            list_item
+                .property_expression("item")
+                .chain_property::<GroupListRowContent>("label")
+                .bind(&row, "label", gtk::Widget::NONE);
+        });
+
+        group_factory
+    }
+
+    pub fn search_expression() -> PropertyExpression {
+        PropertyExpression::new(
+            GroupListRowContent::static_type(),
+            gtk::Expression::NONE,
+            "label"
+        )
+    }
+
+    fn connect_property_changes(&self) {
+        self.connect_notify_local(Some("emoji"), move |instance, _| {
+            instance.set_icon_emoji();
+        });
+        self.connect_notify_local(Some("color"), move |instance, _| {
+            instance.set_draw_func();
+        });
+        self.connect_notify_local(Some("label"), move |instance, _| {
+            instance.set_label();
+        });
     }
 
     fn set_draw_func(&self) {
@@ -147,7 +212,7 @@ impl GroupListRowContent {
             ctx.set_tolerance(0.1);
             ctx.set_line_join(LineJoin::Bevel);
 
-            let color = parent.imp().color.get().unwrap();
+            let color = parent.imp().color.borrow().unwrap();
             ctx.set_source_rgb(color.red() as f64, color.green() as f64, color.blue() as f64);
 
             let gradient = LinearGradient::new(allocation_x,
@@ -179,7 +244,7 @@ impl GroupListRowContent {
 
             force!(ctx.save());
 
-            ctx.arc(width / 2.0,    // x
+            ctx.arc(width / 2.0,     // x
                     height / 2.0,    // y
                     height / 2.0,    // radius
                     0.0,
@@ -188,17 +253,20 @@ impl GroupListRowContent {
 
             force!(ctx.restore());
         }));
+
+        self.imp().icon.queue_draw();
     }
 
     fn set_label(&self) {
-        let label = self.imp().label.get().unwrap();
-        self.imp().name.set_label(&label);
+        if let Some(label) = self.imp().label.borrow().as_ref() {
+            self.imp().name.set_label(&label);
+        }
     }
 
     fn set_icon_emoji(&self) {
-        let icon = self.imp().emoji.get().unwrap();
-        self.imp().icon_emoji.set_label(&icon);
-
-        self.imp().overlay.add_overlay(self.imp().icon_emoji.upcast_ref::<gtk::Label>());
+        if let Some(icon) = self.imp().emoji.borrow().as_ref() {
+            self.imp().icon_emoji.set_label(&icon);
+            self.imp().overlay.add_overlay(self.imp().icon_emoji.upcast_ref::<gtk::Label>());
+        }
     }
 }

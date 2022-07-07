@@ -43,6 +43,8 @@ endif
 blueprints = custom_target('blueprints',
   input: files(
     'ui/create-group-dialog.blp',
+    'ui/create-transaction-dialog.blp',
+    'ui/date-time-picker.blp',
     'ui/empty-dialog.blp',
     'ui/group-list-row-content.blp',
     'ui/window.blp',
@@ -58,6 +60,7 @@ gnome.compile_resources('beedget',
   dependencies: blueprints,
   install: true,
   install_dir: pkgdatadir,
+  source_dir: ['icons/symbolic/scalable/actions']
 )
 
 subdir('icons')

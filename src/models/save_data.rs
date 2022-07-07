@@ -72,6 +72,12 @@ impl SaveData {
         Ok(())
     }
 
+    /// Save group file after changes
+    pub fn save_group(&self, group: &Group) {
+        group.save_to_file(self.save_path.as_path().join(r"groups").as_path())
+            .expect("Could not save group into file");
+    }
+
     /// Add a new callback for when any change occurs to groups (e.g. group added, removed, some
     /// value changed).
     ///

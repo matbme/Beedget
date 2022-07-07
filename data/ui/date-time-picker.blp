@@ -1,0 +1,84 @@
+using Gtk 4.0;
+using Adw 1;
+
+template DateTimePicker: Box {
+  orientation: horizontal;
+  valign: center;
+  halign: fill;
+  spacing: 10;
+  homogeneous: false;
+
+  Entry date_entry {
+    has-frame: true;
+    valign: center;
+    placeholder-text: "04-07-2022";
+    input-purpose: digits;
+    secondary-icon-name: "x-office-calendar-symbolic";
+    icon-press => calendar_popdown() swapped;
+
+    Popover calendar_popover {
+      child: Calendar calendar {
+        day-selected => set_day_selected() swapped;
+      };
+    }
+  }
+
+  Label {
+    styles ["heading"]
+    /* Translators: This is in a date-time picker */
+    label: C_("Time at date (e.g. Tuesday **at** 5PM)", "at");
+  }
+
+  Adw.Clamp {
+    maximum-size: 40;
+
+    Box hour_picker {
+      styles ["linked"]
+      orientation: vertical;
+
+      Button hour_increase {
+        icon-name: "list-add-symbolic";
+        clicked => increase_hour() swapped;
+      }
+
+      Entry hour_value {
+        input-purpose: digits;
+        max-length: 2;
+      }
+
+      Button hour_decrease {
+        icon-name: "list-remove-symbolic";
+        clicked => decrease_hour() swapped;
+      }
+    }
+  }
+
+  Label {
+    styles ["heading"]
+    label: ":";
+  }
+
+  Adw.Clamp {
+    maximum-size: 40;
+
+    Box minute_picker {
+      styles ["linked"]
+      orientation: vertical;
+
+      Button minute_increase {
+        icon-name: "list-add-symbolic";
+        clicked => increase_minute() swapped;
+      }
+
+      Entry minute_value {
+        input-purpose: digits;
+        max-length: 2;
+      }
+
+      Button minute_decrease {
+        icon-name: "list-remove-symbolic";
+        clicked => decrease_minute() swapped;
+      }
+    }
+  }
+}

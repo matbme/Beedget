@@ -1,0 +1,129 @@
+using Gtk 4.0;
+using Adw 1;
+
+template CreateTransactionDialog : Adw.Window {
+  modal: true;
+  default-width: 400;
+
+  Box {
+    orientation: vertical;
+
+    Adw.HeaderBar {
+      show-end-title-buttons: false;
+
+      [start]
+      Button cancel_button {
+        label: _("Cancel");
+        clicked => close_window() swapped;
+      }
+
+      [title]
+      Label {
+        styles ["heading"]
+        label: _("New transaction");
+      }
+
+      [end]
+      Button add_button {
+        styles ["suggested-action"]
+        label: _("Create");
+        clicked => create_transaction() swapped;
+      }
+    }
+
+    Adw.Clamp {
+      Box {
+        orientation: vertical;
+        spacing: 5;
+
+        margin-start: 10;
+        margin-end: 10;
+        margin-top: 10;
+        margin-bottom: 10;
+
+        Label {
+          styles ["heading"]
+          halign: start;
+          label: _("Transaction information");
+        }
+
+        Entry transaction_name {
+          hexpand: true;
+          secondary-icon-name: "document-edit-symbolic";
+          placeholder-text: _("Name");
+        }
+
+        DropDown group_select {
+          enable-search: true;
+        }
+
+        Label {
+          styles ["heading"]
+          margin-top: 10;
+          halign: start;
+          label: _("Amount");
+        }
+
+        Box {
+          orientation: horizontal;
+          spacing: 5;
+
+          Box {
+            orientation: horizontal;
+
+            Box {
+              orientation: vertical;
+
+              CheckButton expense_check_button {
+                group: income_check_button;
+                child: Image {
+                  icon-name: "expense-symbolic";
+                  icon-size: large;
+                };
+              }
+
+              Label {
+                styles ["caption"]
+                label: _("Expense");
+              }
+            }
+
+            Box {
+              orientation: vertical;
+
+              CheckButton income_check_button {
+                child: Image {
+                  icon-name: "income-symbolic";
+                  icon-size: large;
+                };
+              }
+
+              Label {
+                styles ["caption"]
+                label: _("Income");
+              }
+            }
+          }
+
+          Entry amount_entry {
+            hexpand: true;
+            valign: center;
+            primary-icon-name: "money-symbolic";
+            primary-icon-sensitive: false;
+          }
+        }
+
+        Label {
+          styles ["heading"]
+          margin-top: 10;
+          halign: start;
+          label: _("Time");
+        }
+
+        .DateTimePicker dt_picker {
+          halign: center;
+        }
+      }
+    }
+  }
+}
