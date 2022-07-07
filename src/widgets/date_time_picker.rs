@@ -1,7 +1,9 @@
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{glib, CompositeTemplate};
+use glib::{ParamFlags, ParamSpec, ParamSpecGType};
 
+use once_cell::sync::Lazy;
 use derivative::*;
 
 use std::cell::RefCell;
@@ -36,7 +38,7 @@ mod imp {
         pub minute_decrease: TemplateChild<gtk::Button>,
 
         #[derivative(Default(value="RefCell::new(glib::DateTime::now_local().unwrap())"))]
-        pub selected_date: RefCell<glib::DateTime>
+        pub selected_date: RefCell<glib::DateTime>,
     }
 
     #[glib::object_subclass]
@@ -56,6 +58,38 @@ mod imp {
     }
 
     impl ObjectImpl for DateTimePicker {
+        fn properties() -> &'static [glib::ParamSpec] {
+            static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
+                vec![ParamSpecGType::new(
+                    "selected-date",
+                    "selected-date",
+                    "selected-date",
+                    glib::DateTime::static_type(),
+                    ParamFlags::READABLE
+                )]
+            });
+
+            PROPERTIES.as_ref()
+        }
+
+        fn set_property(&self, _obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
+            match pspec.name() {
+                "selected-date" => {
+                    if let Ok(input) = value.get() {
+                        self.selected_date.replace(input);
+                    }
+                }
+                _ => unimplemented!()
+            }
+        }
+
+        fn property(&self, _obj: &Self::Type, _id: usize, pspec: &ParamSpec) -> glib::Value {
+            match pspec.name() {
+                "selected-date" => self.selected_date.borrow().to_value(),
+                _ => unimplemented!()
+            }
+        }
+
         fn constructed(&self, obj: &Self::Type) {
             self.parent_constructed(obj);
 

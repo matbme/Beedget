@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use chrono::prelude::*;
+
+use gtk::glib::DateTime;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum TransactionType {
@@ -13,16 +14,20 @@ pub struct Transaction {
     pub id: Uuid,
     pub name: String,
     pub amount: f32,
-    pub date: DateTime<Utc>
+    date: String
 }
 
 impl Transaction {
-    fn new(name: &str, amount: f32, date: DateTime<Utc>) -> Self {
+    pub fn new(name: &str, amount: f32, date: DateTime) -> Self {
         Self {
             id: Uuid::new_v4(),
             name: String::from(name),
             amount,
-            date
+            date: String::from(date.format_iso8601().unwrap().as_str())
         }
+    }
+
+    pub fn date(&self) -> DateTime {
+        DateTime::from_iso8601(&self.date, None).unwrap()
     }
 }

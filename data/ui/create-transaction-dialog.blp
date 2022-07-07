@@ -31,64 +31,97 @@ template CreateTransactionDialog : Adw.Window {
       }
     }
 
-    Box {
-      orientation: vertical;
-      spacing: 5;
-
-      margin-start: 10;
-      margin-end: 10;
-      margin-top: 10;
-      margin-bottom: 10;
-
-      Label {
-        styles ["heading"]
-        halign: start;
-        label: _("Transaction information");
-      }
-
-      Entry transaction_name {
-        hexpand: true;
-        secondary-icon-name: "document-edit-symbolic";
-        placeholder-text: _("Name");
-      }
-
-      DropDown group_select {
-        enable-search: true;
-      }
-
-      Label {
-        styles ["heading"]
-        margin-top: 10;
-        halign: start;
-        label: _("Time");
-      }
-
-      .DateTimePicker dt_picker {
-        halign: center;
-      }
-
-      Label {
-        styles ["heading"]
-        margin-top: 10;
-        halign: start;
-        label: _("Value");
-      }
-
+    Adw.Clamp {
       Box {
-        orientation: horizontal;
+        orientation: vertical;
         spacing: 5;
 
+        margin-start: 10;
+        margin-end: 10;
+        margin-top: 10;
+        margin-bottom: 10;
+
+        Label {
+          styles ["heading"]
+          halign: start;
+          label: _("Transaction information");
+        }
+
+        Entry transaction_name {
+          hexpand: true;
+          secondary-icon-name: "document-edit-symbolic";
+          placeholder-text: _("Name");
+        }
+
+        DropDown group_select {
+          enable-search: true;
+        }
+
+        Label {
+          styles ["heading"]
+          margin-top: 10;
+          halign: start;
+          label: _("Amount");
+        }
+
         Box {
-          styles ["linked"]
           orientation: horizontal;
+          spacing: 5;
 
-          Button {
-            icon-name: "expense-symbolic";
+          Box {
+            orientation: horizontal;
+
+            Box {
+              orientation: vertical;
+
+              CheckButton expense_check_button {
+                group: income_check_button;
+                child: Image {
+                  icon-name: "expense-symbolic";
+                  icon-size: large;
+                };
+              }
+
+              Label {
+                styles ["caption"]
+                label: _("Expense");
+              }
+            }
+
+            Box {
+              orientation: vertical;
+
+              CheckButton income_check_button {
+                child: Image {
+                  icon-name: "income-symbolic";
+                  icon-size: large;
+                };
+              }
+
+              Label {
+                styles ["caption"]
+                label: _("Income");
+              }
+            }
           }
 
-          Button {
-            icon-name: "income-symbolic";
+          Entry amount_entry {
+            hexpand: true;
+            valign: center;
+            primary-icon-name: "money-symbolic";
+            primary-icon-sensitive: false;
           }
+        }
+
+        Label {
+          styles ["heading"]
+          margin-top: 10;
+          halign: start;
+          label: _("Time");
+        }
+
+        .DateTimePicker dt_picker {
+          halign: center;
         }
       }
     }

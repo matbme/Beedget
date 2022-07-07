@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use gtk::gdk::RGBA;
 
+use std::cell::RefCell;
+
 use crate::models::{DataObject, Transaction};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
@@ -10,7 +12,7 @@ pub struct Group {
     pub name: String,
     pub emoji: String,
     pub color: Vec<f32>,
-    transactions: Vec<Transaction>
+    transactions: RefCell<Vec<Transaction>>
 }
 
 impl DataObject for Group {
@@ -26,7 +28,7 @@ impl Group {
             name: String::from(name),
             emoji: String::from(emoji),
             color: vec![color.red(), color.green(), color.blue(), color.alpha()],
-            transactions: vec![]
+            transactions: RefCell::new(vec![])
         }
     }
 
@@ -37,5 +39,9 @@ impl Group {
             self.color[2],
             self.color[3]
         )
+    }
+
+    pub fn new_transaction(&self, transaction: Transaction) {
+        self.transactions.borrow_mut().push(transaction);
     }
 }
