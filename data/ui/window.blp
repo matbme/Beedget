@@ -18,14 +18,32 @@ template BeedgetWindow : Adw.ApplicationWindow {
         Adw.WindowTitle {}
 
         [start]
-        Button {
+        ToggleButton search_button {
           icon-name: "system-search-symbolic";
-          clicked => open_sidebar_search() swapped;
         }
       }
 
-      ListBox sidebar {
-        styles ["navigation-sidebar"]
+      SearchBar search_bar {
+        search-mode-enabled: bind search_button.active;
+
+        child: SearchEntry {
+          margin-top: 5;
+          margin-bottom: 5;
+          margin-start: 5;
+          margin-end: 5;
+          placeholder-text: _("Search...");
+          search-changed => filter_group_list() swapped;
+        };
+      }
+
+      ScrolledWindow {
+        min-content-height: 100;
+        hscrollbar-policy: never;
+        vexpand: true;
+
+        ListView sidebar {
+          styles ["navigation-sidebar"]
+        }
       }
     }
 

@@ -23,7 +23,10 @@ mod imp {
         pub pane: TemplateChild<adw::Leaflet>,
 
         #[template_child]
-        pub sidebar: TemplateChild<gtk::ListBox>,
+        pub search_bar: TemplateChild<gtk::SearchBar>,
+
+        #[template_child]
+        pub sidebar: TemplateChild<gtk::ListView>,
 
         #[template_child]
         pub content: TemplateChild<gtk::Box>
@@ -82,8 +85,15 @@ impl BeedgetWindow {
     }
 
     #[template_callback]
-    fn open_sidebar_search(&self) {
-
+    fn filter_group_list(&self, entry: &gtk::SearchEntry) {
+        self.imp().sidebar
+            .model().unwrap()
+            .downcast_ref::<gtk::SingleSelection>().unwrap()
+            .model().unwrap()
+            .downcast_ref::<gtk::FilterListModel>().unwrap()
+            .filter().unwrap()
+            .downcast_ref::<gtk::StringFilter>().unwrap()
+            .set_search(Some(&entry.text()));
     }
 
     fn setup_gactions(&self) {
@@ -118,16 +128,14 @@ impl BeedgetWindow {
         app_data!(|data| {
             data.init_group_model();
 
-            self.imp().sidebar.bind_model(
-                data.group_model.get(),
-                glib::clone!(@weak self as parent => @default-panic, move |item| {
-                    let row = gtk::ListBoxRow::new();
-                    row.set_child(item.downcast_ref::<GroupListRowContent>());
-                    row.upcast::<gtk::Widget>()
-                })
-            );
+            let filter = gtk::StringFilter::new(Some(GroupListRowContent::search_expression()));
+            let filter_model = gtk::FilterListModel::new(data.group_model.get(), Some(&filter));
+            let selection_model = gtk::SingleSelection::new(Some(&filter_model));
+
+            self.imp().sidebar.set_model(Some(&selection_model));
         });
 
+        self.imp().sidebar.set_factory(Some(&GroupListRowContent::factory()));
 
         // TODO: Get rid of this
         let empty_dialog = EmptyDialog::new();
