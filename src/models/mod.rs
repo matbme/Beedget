@@ -6,4 +6,4 @@ pub mod save_data;
 pub use group::Group;
 pub use transaction::Transaction;
 pub use data_object::DataObject;
-pub use save_data::{SaveData, UpdateType};
+pub use save_data::SaveData;

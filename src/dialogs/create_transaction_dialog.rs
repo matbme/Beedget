@@ -1,6 +1,6 @@
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{gdk, gio, glib, CompositeTemplate};
+use gtk::{gdk, glib, CompositeTemplate};
 
 use adw::subclass::window::AdwWindowImpl;
 
@@ -165,20 +165,8 @@ impl CreateTransactionDialog {
     }
 
     fn populate_group_select_dropdown(&self) {
-        let model = gio::ListStore::new(GroupListRowContent::static_type());
-        app_data!(|data| {
-            for group in data.groups.borrow().iter() {
-                let row = GroupListRowContent::new(
-                    &group.emoji,
-                    &group.rgba_color(),
-                    &group.name
-                );
-                model.append(&row);
-            }
-        });
-
         self.imp().group_select.set_factory(Some(&GroupListRowContent::factory()));
-        self.imp().group_select.set_model(Some(&model));
+        app_data!(|data| self.imp().group_select.set_model(data.group_model.get()));
         self.imp().group_select.set_expression(Some(&GroupListRowContent::search_expression()));
     }
 }

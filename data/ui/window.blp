@@ -5,44 +5,54 @@ template BeedgetWindow : Adw.ApplicationWindow {
   default-width: 800;
   default-height: 600;
 
-  Box {
-    orientation: vertical;
+  Adw.Leaflet pane {
+    vexpand: true;
 
-    Adw.HeaderBar header_bar {
-      [start]
-      Adw.SplitButton {
-        icon-name: "list-add-symbolic";
-        menu-model: add_menu;
-        clicked => open_create_transaction_dialog() swapped;
+    Box {
+      orientation: vertical;
+
+      Adw.HeaderBar side_headerbar {
+        show-end-title-buttons: false;
+
+        [title]
+        Adw.WindowTitle {}
+
+        [start]
+        Button {
+          icon-name: "system-search-symbolic";
+          clicked => open_sidebar_search() swapped;
+        }
       }
-
-      [title]
-      Label {
-          styles ["title"]
-          single-line-mode: true;
-
-          label: _("Beedget");
-      }
-
-      [end]
-      MenuButton {
-        icon-name: "open-menu-symbolic";
-        menu-model: primary_menu;
-      }
-    }
-
-    Adw.Leaflet pane {
-      vexpand: true;
 
       ListBox sidebar {
         styles ["navigation-sidebar"]
       }
+    }
 
-      Separator {}
+    Separator {}
 
-      Box content {
-        hexpand: true;
-        halign: center;
+    Box content {
+      orientation: vertical;
+      hexpand: true;
+
+      Adw.HeaderBar main_headerbar {
+        [start]
+        Adw.SplitButton {
+          icon-name: "list-add-symbolic";
+          menu-model: add_menu;
+          clicked => open_create_transaction_dialog() swapped;
+        }
+
+        [title]
+        Adw.WindowTitle {
+            title: _("Beedget");
+        }
+
+        [end]
+        MenuButton {
+          icon-name: "open-menu-symbolic";
+          menu-model: primary_menu;
+        }
       }
     }
   }

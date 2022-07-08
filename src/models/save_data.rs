@@ -4,24 +4,20 @@ use std::fs;
 use std::io::ErrorKind;
 
 use anyhow::{Error, Result};
-use derivative::*;
+use once_cell::sync::OnceCell;
+
+use gtk::prelude::*;
+use gtk::gio;
 
 use crate::models::{DataObject, Group};
+use crate::widgets::*;
 
-pub enum UpdateType {
-    Added,
-    Removed,
-    Changed
-}
-
-#[derive(Derivative)]
-#[derivative(Default, Debug)]
+#[derive(Default, Debug)]
 pub struct SaveData {
     pub groups: RefCell<Vec<Group>>,
     save_path: PathBuf,
 
-    #[derivative(Debug="ignore")]
-    group_update_callbacks: RefCell<Vec<Box<dyn Fn(&Group, &UpdateType)>>>
+    pub group_model: OnceCell<gio::ListStore>
 }
 
 impl SaveData {
@@ -31,7 +27,7 @@ impl SaveData {
                 Self {
                     groups: RefCell::new(groups),
                     save_path: pb.to_owned(),
-                    group_update_callbacks: RefCell::new(vec![])
+                    group_model: OnceCell::from(gio::ListStore::new(GroupListRowContent::static_type()))
                 }
             }
             Err(_) => { panic!("Could not access save data directory"); }
@@ -61,13 +57,32 @@ impl SaveData {
         }
     }
 
+    /// Initialize groups model based on data loaded from storage
+    pub fn init_group_model(&self) {
+        for group in self.groups.borrow().iter() {
+            let row = GroupListRowContent::new(
+                &group.emoji,
+                &group.rgba_color(),
+                &group.name
+            );
+            self.group_model.get().unwrap().append(&row);
+        }
+    }
+
     /// Add new group to groups list.
     pub fn new_group(&self, group: Group) -> Result<()> {
         self.groups.borrow_mut().push(group);
-        self.groups.borrow().last().unwrap()
+
+        let stored_group = self.groups.borrow();
+        stored_group.last().unwrap()
             .save_to_file(self.save_path.as_path().join(r"groups").as_path())?;
 
-        self.run_group_update_callbacks(&self.groups.borrow().last().unwrap(), &UpdateType::Added);
+        let row = GroupListRowContent::new(
+            &stored_group.last().unwrap().emoji,
+            &stored_group.last().unwrap().rgba_color(),
+            &stored_group.last().unwrap().name
+        );
+        self.group_model.get().unwrap().append(&row);
 
         Ok(())
     }
@@ -76,22 +91,5 @@ impl SaveData {
     pub fn save_group(&self, group: &Group) {
         group.save_to_file(self.save_path.as_path().join(r"groups").as_path())
             .expect("Could not save group into file");
-    }
-
-    /// Add a new callback for when any change occurs to groups (e.g. group added, removed, some
-    /// value changed).
-    ///
-    /// Callbacks receive two arguments as input:
-    /// - A reference to the modified group
-    /// - An `UpdateType` enum representing the change type
-    pub fn add_group_update_callback<F: 'static + Fn(&Group, &UpdateType)>(&self, callback: F) {
-        self.group_update_callbacks.borrow_mut().push(Box::new(callback));
-    }
-
-    /// Run all callbacks registered for changes to groups.
-    fn run_group_update_callbacks(&self, updated_group: &Group, update_type: &UpdateType) {
-        for callback in self.group_update_callbacks.borrow().iter() {
-            callback(updated_group, update_type);
-        }
     }
 }
