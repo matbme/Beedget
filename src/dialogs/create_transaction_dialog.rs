@@ -96,6 +96,13 @@ impl CreateTransactionDialog {
         app_data!(|data| {
             let transaction = Transaction::new(
                 &self.imp().transaction_name.text(),
+                {
+                    if self.imp().expense_check_button.is_active() {
+                        TransactionType::EXPENSE
+                    } else {
+                        TransactionType::INCOME
+                    }
+                },
                 self.amount_entry_value().unwrap(),
                 self.imp().dt_picker.property("selected-date")
             );

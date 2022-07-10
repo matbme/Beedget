@@ -4,7 +4,7 @@ macro_rules! force {
     ( $x:expr ) => {
         match $x {
             Ok(()) => { }
-            Err(error) => { panic!("{}", error); }
+            Err(error) => { panic!("{:?}", error); }
         }
     };
 }

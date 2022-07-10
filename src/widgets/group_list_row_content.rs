@@ -15,7 +15,6 @@ use crate::force;
 mod imp {
     use super::*;
 
-
     #[derive(Debug, Default, CompositeTemplate)]
     #[template(resource = "/com/github/matbme/beedget/ui/group-list-row-content.ui")]
     pub struct GroupListRowContent {

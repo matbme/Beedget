@@ -123,7 +123,7 @@ impl BeedgetWindow {
         }));
     }
 
-    /// Initialize sidebar with content from application data
+    /// Initialize sidebar with groups from application data
     fn init_sidebar(&self) {
         app_data!(|data| {
             data.init_group_model();
@@ -132,13 +132,28 @@ impl BeedgetWindow {
             let filter_model = gtk::FilterListModel::new(data.group_model.get(), Some(&filter));
             let selection_model = gtk::SingleSelection::new(Some(&filter_model));
 
+            selection_model.connect_selected_notify(clone!(@weak self as win => move |model| {
+                win.transaction_list(model.selected());
+            }));
+
             self.imp().sidebar.set_model(Some(&selection_model));
         });
 
         self.imp().sidebar.set_factory(Some(&GroupListRowContent::factory()));
+    }
 
-        // TODO: Get rid of this
-        let empty_dialog = EmptyDialog::new();
-        self.imp().content.append(&empty_dialog);
+    fn transaction_list(&self, selected: u32) {
+        app_data!(|data| {
+            let transaction_list = gtk::ListBox::new();
+            transaction_list.bind_model(
+                Some(data.groups.borrow()[selected as usize].transaction_model()),
+                clone!(@weak self as win => @default-panic, move |item| {
+                    let row = item.downcast_ref::<TransactionRow>().unwrap().clone();
+                    row.upcast::<gtk::Widget>()
+                })
+            );
+
+            self.imp().content.append(&transaction_list);
+        });
     }
 }

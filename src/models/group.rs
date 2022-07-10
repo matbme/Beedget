@@ -1,10 +1,16 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+use gtk::prelude::*;
 use gtk::gdk::RGBA;
+use gtk::gio;
+
+use once_cell::unsync::OnceCell;
 
 use std::cell::RefCell;
 
-use crate::models::{DataObject, Transaction};
+use crate::models::*;
+use crate::widgets::*;
 
 #[derive(Debug, Default, Serialize, Deserialize)]
 pub struct Group {
@@ -12,7 +18,10 @@ pub struct Group {
     pub name: String,
     pub emoji: String,
     pub color: Vec<f32>,
-    transactions: RefCell<Vec<Transaction>>
+    transactions: RefCell<Vec<Transaction>>,
+
+    #[serde(skip_serializing, skip_deserializing)]
+    transaction_model: OnceCell<gio::ListStore>
 }
 
 impl DataObject for Group {
@@ -28,7 +37,8 @@ impl Group {
             name: String::from(name),
             emoji: String::from(emoji),
             color: vec![color.red(), color.green(), color.blue(), color.alpha()],
-            transactions: RefCell::new(vec![])
+            transactions: RefCell::new(vec![]),
+            transaction_model: OnceCell::new()
         }
     }
 
@@ -43,5 +53,18 @@ impl Group {
 
     pub fn new_transaction(&self, transaction: Transaction) {
         self.transactions.borrow_mut().push(transaction);
+    }
+
+    pub fn transaction_model(&self) -> &gio::ListStore {
+        self.transaction_model.get_or_init(|| {
+            let ls = gio::ListStore::new(TransactionRow::static_type());
+
+            for transaction in self.transactions.borrow().iter() {
+                let row = TransactionRow::new(&transaction);
+                ls.append(&row);
+            }
+
+            ls
+        })
     }
 }

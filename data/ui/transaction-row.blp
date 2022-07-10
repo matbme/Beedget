@@ -1,0 +1,19 @@
+using Gtk 4.0;
+using Adw 1;
+
+template TransactionRow: Adw.ActionRow {
+  [suffix]
+  Box {
+    orientation: horizontal;
+    spacing: 30;
+
+    Label amount_label {
+      valign: center;
+    }
+
+    Button options {
+      icon-name: "open-menu-symbolic";
+      valign: center;
+    }
+  }
+}
