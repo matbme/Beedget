@@ -53,6 +53,12 @@ impl Group {
 
     pub fn new_transaction(&self, transaction: Transaction) {
         self.transactions.borrow_mut().push(transaction);
+
+        // Append to model if initialized
+        if self.transaction_model.get().is_some() {
+            let row = TransactionRow::new(&self.transactions.borrow().last().unwrap());
+            self.transaction_model.get().unwrap().append(&row);
+        }
     }
 
     pub fn transaction_model(&self) -> &gio::ListStore {

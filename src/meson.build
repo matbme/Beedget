@@ -32,6 +32,7 @@ rust_sources = files(
   'models/save_data.rs',
   'models/transaction.rs',
   'widgets/date_time_picker.rs',
+  'widgets/group_content.rs',
   'widgets/group_list_row_content.rs',
   'widgets/transaction_row.rs',
   'widgets/mod.rs',

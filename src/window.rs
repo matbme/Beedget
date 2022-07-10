@@ -3,7 +3,10 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gio, glib, CompositeTemplate};
 
+use adw::prelude::BinExt;
 use adw::subclass::application_window::AdwApplicationWindowImpl;
+
+use std::ptr::addr_of;
 
 use crate::widgets::*;
 use crate::dialogs::*;
@@ -29,7 +32,10 @@ mod imp {
         pub sidebar: TemplateChild<gtk::ListView>,
 
         #[template_child]
-        pub content: TemplateChild<gtk::Box>
+        pub content_pane: TemplateChild<gtk::Box>,
+
+        #[template_child]
+        pub content: TemplateChild<adw::Bin>
     }
 
     #[glib::object_subclass]
@@ -144,16 +150,8 @@ impl BeedgetWindow {
 
     fn transaction_list(&self, selected: u32) {
         app_data!(|data| {
-            let transaction_list = gtk::ListBox::new();
-            transaction_list.bind_model(
-                Some(data.groups.borrow()[selected as usize].transaction_model()),
-                clone!(@weak self as win => @default-panic, move |item| {
-                    let row = item.downcast_ref::<TransactionRow>().unwrap().clone();
-                    row.upcast::<gtk::Widget>()
-                })
-            );
-
-            self.imp().content.append(&transaction_list);
+            let content_page = GroupContent::new(addr_of!(data.groups.borrow()[selected as usize]));
+            self.imp().content.set_child(Some(&content_page));
         });
     }
 }
