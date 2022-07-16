@@ -6,8 +6,6 @@ use gtk::{gio, glib, CompositeTemplate};
 use adw::prelude::BinExt;
 use adw::subclass::application_window::AdwApplicationWindowImpl;
 
-use std::ptr::addr_of;
-
 use crate::widgets::*;
 use crate::dialogs::*;
 
@@ -139,19 +137,48 @@ impl BeedgetWindow {
             let selection_model = gtk::SingleSelection::new(Some(&filter_model));
 
             selection_model.connect_selected_notify(clone!(@weak self as win => move |model| {
-                win.transaction_list(model.selected());
+                win.set_content_page(model);
             }));
 
             self.imp().sidebar.set_model(Some(&selection_model));
         });
 
         self.imp().sidebar.set_factory(Some(&GroupListRowContent::factory()));
+
+        // Fill content with element selected by default
+        self.set_content_page(&self.imp().sidebar.model().unwrap()
+            .downcast_ref::<gtk::SingleSelection>().unwrap());
     }
 
-    fn transaction_list(&self, selected: u32) {
-        app_data!(|data| {
-            let content_page = GroupContent::new(addr_of!(data.groups.borrow()[selected as usize]));
-            self.imp().content.set_child(Some(&content_page));
-        });
+    /// Crates content page for selected group
+    fn set_content_page(&self, model: &gtk::SingleSelection) {
+        if model.selected() != gtk::INVALID_LIST_POSITION {
+            let filtered_model = model.model().unwrap();
+            let selected_object = filtered_model
+                .item(model.selected()).unwrap();
+            let selected_group = selected_object
+                .downcast_ref::<GroupListRowContent>().unwrap()
+                .imp().group_ptr.borrow().unwrap();
+
+            // If we try to create a new GroupContent from the same group as
+            // the currently constructed view, the application freezes
+            if let Some(child) = self.imp().content.child() {
+                let child_id = unsafe { child
+                    .downcast_ref::<GroupContent>().unwrap()
+                    .imp().group_ptr.get().unwrap()
+                    .as_ref().unwrap()
+                }.id;
+
+                let new_id = unsafe { selected_group.as_ref().unwrap() }.id;
+
+                if child_id != new_id {
+                    let content_page = GroupContent::new(unsafe { selected_group.as_ref().unwrap() });
+                    self.imp().content.set_child(Some(&content_page));
+                }
+            } else {
+                let content_page = GroupContent::new(unsafe { selected_group.as_ref().unwrap() });
+                self.imp().content.set_child(Some(&content_page));
+            }
+        }
     }
 }

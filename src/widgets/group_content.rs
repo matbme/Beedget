@@ -89,7 +89,7 @@ impl GroupContent {
 
         glib::Object::new(&[
             ("group", &group_ptr.cast::<Pointee>().to_value()),
-        ]).expect("Failed to create `GroupListRowContent`.")
+        ]).expect("Failed to create `GroupContent`.")
     }
 
     fn init_transaction_history(&self) {
@@ -100,7 +100,7 @@ impl GroupContent {
         };
 
         self.imp().transaction_history.bind_model(
-            Some(model),
+            Some(&model),
             glib::clone!(@weak self as parent => @default-panic, move |item| {
                 let row = item.downcast_ref::<TransactionRow>().unwrap().clone();
                 row.upcast::<gtk::Widget>()

@@ -60,11 +60,7 @@ impl SaveData {
     /// Initialize groups model based on data loaded from storage
     pub fn init_group_model(&self) {
         for group in self.groups.borrow().iter() {
-            let row = GroupListRowContent::new(
-                &group.emoji,
-                &group.rgba_color(),
-                &group.name
-            );
+            let row = GroupListRowContent::new(group);
             self.group_model.get().unwrap().append(&row);
         }
     }
@@ -77,11 +73,7 @@ impl SaveData {
         stored_group.last().unwrap()
             .save_to_file(self.save_path.as_path().join(r"groups").as_path())?;
 
-        let row = GroupListRowContent::new(
-            &stored_group.last().unwrap().emoji,
-            &stored_group.last().unwrap().rgba_color(),
-            &stored_group.last().unwrap().name
-        );
+        let row = GroupListRowContent::new(stored_group.last().unwrap());
         self.group_model.get().unwrap().append(&row);
 
         Ok(())

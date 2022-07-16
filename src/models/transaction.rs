@@ -35,6 +35,22 @@ impl Transaction {
         DateTime::from_iso8601(&self.date, None).unwrap()
     }
 
+    pub fn set_name(&mut self, name: &str) {
+        self.name = name.to_string();
+    }
+
+    pub fn change_tr_type(&mut self, tr_type: TransactionType) {
+        self.tr_type = tr_type;
+    }
+
+    pub fn set_amount(&mut self, amount: f32) {
+        self.amount = amount;
+    }
+
+    pub fn set_date(&mut self, date: DateTime) {
+        self.date = String::from(date.format_iso8601().unwrap().as_str());
+    }
+
     pub fn signed_amount(&self) -> f32 {
         match self.tr_type {
             TransactionType::EXPENSE => -self.amount,

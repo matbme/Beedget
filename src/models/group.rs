@@ -5,8 +5,6 @@ use gtk::prelude::*;
 use gtk::gdk::RGBA;
 use gtk::gio;
 
-use once_cell::unsync::OnceCell;
-
 use std::cell::RefCell;
 
 use crate::models::*;
@@ -19,9 +17,6 @@ pub struct Group {
     pub emoji: String,
     pub color: Vec<f32>,
     transactions: RefCell<Vec<Transaction>>,
-
-    #[serde(skip_serializing, skip_deserializing)]
-    transaction_model: OnceCell<gio::ListStore>
 }
 
 impl DataObject for Group {
@@ -38,7 +33,6 @@ impl Group {
             emoji: String::from(emoji),
             color: vec![color.red(), color.green(), color.blue(), color.alpha()],
             transactions: RefCell::new(vec![]),
-            transaction_model: OnceCell::new()
         }
     }
 
@@ -53,24 +47,16 @@ impl Group {
 
     pub fn new_transaction(&self, transaction: Transaction) {
         self.transactions.borrow_mut().push(transaction);
-
-        // Append to model if initialized
-        if self.transaction_model.get().is_some() {
-            let row = TransactionRow::new(&self.transactions.borrow().last().unwrap());
-            self.transaction_model.get().unwrap().append(&row);
-        }
     }
 
-    pub fn transaction_model(&self) -> &gio::ListStore {
-        self.transaction_model.get_or_init(|| {
-            let ls = gio::ListStore::new(TransactionRow::static_type());
+    pub fn transaction_model(&self) -> gio::ListStore {
+        let ls = gio::ListStore::new(TransactionRow::static_type());
 
-            for transaction in self.transactions.borrow().iter() {
-                let row = TransactionRow::new(&transaction);
-                ls.append(&row);
-            }
+        for transaction in self.transactions.borrow().iter() {
+            let row = TransactionRow::new(transaction);
+            ls.append(&row);
+        }
 
-            ls
-        })
+        ls
     }
 }

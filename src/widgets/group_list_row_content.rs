@@ -1,16 +1,18 @@
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, CompositeTemplate, SignalListItemFactory, PropertyExpression};
-use gtk::gdk::RGBA;
+use gtk::{glib, CompositeTemplate, SignalListItemFactory};
 use gtk::cairo::{LineJoin, LinearGradient};
-use glib::{ParamFlags, ParamSpec, ParamSpecString};
+use glib::{ParamFlags, ParamSpec, ParamSpecPointer};
+use glib::types::Pointee;
 
 use once_cell::sync::Lazy;
 
-use std::f64::consts::PI;
 use std::cell::RefCell;
+use std::f64::consts::PI;
+use std::ptr::NonNull;
 
 use crate::force;
+use crate::models::*;
 
 mod imp {
     use super::*;
@@ -30,9 +32,7 @@ mod imp {
         #[template_child]
         pub name: TemplateChild<gtk::Label>,
 
-        pub emoji: RefCell<Option<String>>,
-        pub color: RefCell<Option<RGBA>>,
-        pub label: RefCell<Option<String>>
+        pub group_ptr: RefCell<Option<*const Group>>,
     }
 
     #[glib::object_subclass]
@@ -53,25 +53,10 @@ mod imp {
     impl ObjectImpl for GroupListRowContent {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecString::new(
-                    "emoji",
-                    "emoji",
-                    "emoji",
-                    None,
-                    ParamFlags::CONSTRUCT | ParamFlags::READWRITE
-                ),
-                ParamSpecString::new(
-                    "color",
-                    "color",
-                    "color",
-                    None,
-                    ParamFlags::CONSTRUCT | ParamFlags::READWRITE
-                ),
-                ParamSpecString::new(
-                    "label",
-                    "label",
-                    "label",
-                    None,
+                vec![ParamSpecPointer::new(
+                    "group",
+                    "group",
+                    "group",
                     ParamFlags::CONSTRUCT | ParamFlags::READWRITE
                 )]
             });
@@ -79,21 +64,15 @@ mod imp {
             PROPERTIES.as_ref()
         }
 
-        fn set_property(&self, _obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
+        fn set_property(&self, obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
             match pspec.name() {
-                "emoji" => {
-                    if let Ok(input) = value.get() {
-                        self.emoji.replace(input);
-                    }
-                }
-                "color" => {
-                    if let Ok(input) = value.get() {
-                        self.color.replace(Some(RGBA::parse(input).unwrap()));
-                    }
-                }
-                "label" => {
-                    if let Ok(input) = value.get() {
-                        self.label.replace(input);
+                "group" => {
+                    if let Ok(input) = value.get::<NonNull::<Pointee>>() {
+                        let ptr_cast = input.cast::<Group>();
+                        self.group_ptr.replace(Some(ptr_cast.as_ptr()));
+                        obj.set_icon_emoji();
+                        obj.set_draw_func();
+                        obj.set_label();
                     }
                 }
                 _ => unimplemented!()
@@ -102,27 +81,18 @@ mod imp {
 
         fn property(&self, _obj: &Self::Type, _id: usize, pspec: &ParamSpec) -> glib::Value {
             match pspec.name() {
-                "emoji" => self.emoji.borrow().to_value(),
-                "color" => self.color.borrow().unwrap().to_str().to_value(),
-                "label" => self.label.borrow().to_value(),
+                "group" => {
+                    let group = NonNull::new(self.group_ptr.borrow().unwrap() as *mut Group)
+                        .expect("Group is invalid");
+
+                    group.cast::<Pointee>().to_value()
+                }
                 _ => unimplemented!()
             }
         }
 
         fn constructed(&self, obj: &Self::Type) {
             self.parent_constructed(obj);
-
-            if self.emoji.borrow().is_some() {
-                obj.set_icon_emoji();
-            }
-
-            if self.color.borrow().is_some() {
-                obj.set_draw_func();
-            }
-
-            if self.label.borrow().is_some() {
-                obj.set_label();
-            }
 
             obj.connect_property_changes();
         }
@@ -139,11 +109,12 @@ glib::wrapper! {
 }
 
 impl GroupListRowContent {
-    pub fn new(emoji: &str, color: &RGBA, label: &str) -> Self {
+    pub fn new(group: *const Group) -> Self {
+        let group_ptr = NonNull::new(group as *mut Group)
+            .expect("Invalid pointer to group");
+
         glib::Object::new(&[
-            ("emoji", &String::from(emoji)),
-            ("color", &color.to_str()),
-            ("label", &String::from(label)),
+            ("group", &group_ptr.cast::<Pointee>().to_value())
         ]).expect("Failed to create `GroupListRowContent`.")
     }
 
@@ -162,39 +133,29 @@ impl GroupListRowContent {
 
             list_item
                 .property_expression("item")
-                .chain_property::<GroupListRowContent>("emoji")
-                .bind(&row, "emoji", gtk::Widget::NONE);
-
-            list_item
-                .property_expression("item")
-                .chain_property::<GroupListRowContent>("color")
-                .bind(&row, "color", gtk::Widget::NONE);
-
-            list_item
-                .property_expression("item")
-                .chain_property::<GroupListRowContent>("label")
-                .bind(&row, "label", gtk::Widget::NONE);
+                .chain_property::<GroupListRowContent>("group")
+                .bind(&row, "group", gtk::Widget::NONE);
         });
 
         group_factory
     }
 
-    pub fn search_expression() -> PropertyExpression {
-        PropertyExpression::new(
-            GroupListRowContent::static_type(),
-            gtk::Expression::NONE,
-            "label"
-        )
+    pub fn search_expression() -> gtk::ClosureExpression {
+        gtk::ClosureExpression::with_callback(gtk::Expression::NONE, |v| {
+            let row = v[0].get::<GroupListRowContent>()
+                .expect("Value is not a `GroupListRowContent`");
+
+            let group = row.imp().group_ptr.borrow();
+            unsafe {
+                group.unwrap().as_ref().unwrap().name.clone()
+            }
+        })
     }
 
     fn connect_property_changes(&self) {
-        self.connect_notify_local(Some("emoji"), move |instance, _| {
+        self.connect_notify_local(Some("group"), move |instance, _| {
             instance.set_icon_emoji();
-        });
-        self.connect_notify_local(Some("color"), move |instance, _| {
             instance.set_draw_func();
-        });
-        self.connect_notify_local(Some("label"), move |instance, _| {
             instance.set_label();
         });
     }
@@ -211,7 +172,9 @@ impl GroupListRowContent {
             ctx.set_tolerance(0.1);
             ctx.set_line_join(LineJoin::Bevel);
 
-            let color = parent.imp().color.borrow().unwrap();
+            let color = unsafe {
+                parent.imp().group_ptr.borrow().unwrap().as_ref().unwrap()
+            }.rgba_color();
             ctx.set_source_rgb(color.red() as f64, color.green() as f64, color.blue() as f64);
 
             let gradient = LinearGradient::new(allocation_x,
@@ -257,15 +220,19 @@ impl GroupListRowContent {
     }
 
     fn set_label(&self) {
-        if let Some(label) = self.imp().label.borrow().as_ref() {
-            self.imp().name.set_label(&label);
-        }
+        let label = &unsafe {
+            self.imp().group_ptr.borrow().unwrap().as_ref().unwrap()
+        }.name;
+
+        self.imp().name.set_label(&label);
     }
 
     fn set_icon_emoji(&self) {
-        if let Some(icon) = self.imp().emoji.borrow().as_ref() {
-            self.imp().icon_emoji.set_label(&icon);
-            self.imp().overlay.add_overlay(self.imp().icon_emoji.upcast_ref::<gtk::Label>());
-        }
+        let icon = &unsafe {
+            self.imp().group_ptr.borrow().unwrap().as_ref().unwrap()
+        }.emoji;
+
+        self.imp().icon_emoji.set_label(&icon);
+        self.imp().overlay.add_overlay(self.imp().icon_emoji.upcast_ref::<gtk::Label>());
     }
 }
