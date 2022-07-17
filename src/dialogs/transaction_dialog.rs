@@ -258,7 +258,7 @@ impl TransactionDialog {
             .item(selected_group_idx).unwrap();
 
         let selected_group = selected_object
-            .downcast_ref::<GroupListRowContent>().unwrap()
+            .downcast_ref::<GroupRow>().unwrap()
             .imp().group_ptr.borrow().unwrap();
 
         selected_group
@@ -319,9 +319,9 @@ impl TransactionDialog {
     }
 
     fn populate_group_select_dropdown(&self) {
-        self.imp().group_select.set_factory(Some(&GroupListRowContent::factory()));
+        self.imp().group_select.set_factory(Some(&GroupRow::factory()));
         app_data!(|data| self.imp().group_select.set_model(data.group_model.get()));
-        self.imp().group_select.set_expression(Some(&GroupListRowContent::search_expression()));
+        self.imp().group_select.set_expression(Some(&GroupRow::search_expression()));
     }
 
     /// Fill entries with transaction values for edit
@@ -368,7 +368,7 @@ impl TransactionDialog {
         for row in self.imp().group_select.model().unwrap().into_iter() {
             let row_group_id = unsafe {
                 row
-                    .downcast_ref::<GroupListRowContent>().unwrap()
+                    .downcast_ref::<GroupRow>().unwrap()
                     .imp().group_ptr.borrow().unwrap().as_ref().unwrap()
             }.id;
 

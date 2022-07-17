@@ -18,8 +18,8 @@ mod imp {
     use super::*;
 
     #[derive(Debug, Default, CompositeTemplate)]
-    #[template(resource = "/com/github/matbme/beedget/ui/group-list-row-content.ui")]
-    pub struct GroupListRowContent {
+    #[template(resource = "/com/github/matbme/beedget/ui/group-row.ui")]
+    pub struct GroupRow {
         #[template_child]
         pub overlay: TemplateChild<gtk::Overlay>,
 
@@ -36,9 +36,9 @@ mod imp {
     }
 
     #[glib::object_subclass]
-    impl ObjectSubclass for GroupListRowContent {
-        const NAME: &'static str = "GroupListRowContent";
-        type Type = super::GroupListRowContent;
+    impl ObjectSubclass for GroupRow {
+        const NAME: &'static str = "GroupRow";
+        type Type = super::GroupRow;
         type ParentType = gtk::Box;
 
         fn class_init(klass: &mut Self::Class) {
@@ -50,7 +50,7 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for GroupListRowContent {
+    impl ObjectImpl for GroupRow {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
                 vec![ParamSpecPointer::new(
@@ -98,42 +98,42 @@ mod imp {
         }
     }
 
-    impl WidgetImpl for GroupListRowContent {}
-    impl BoxImpl for GroupListRowContent {}
+    impl WidgetImpl for GroupRow {}
+    impl BoxImpl for GroupRow {}
 }
 
 glib::wrapper! {
-    pub struct GroupListRowContent(ObjectSubclass<imp::GroupListRowContent>)
+    pub struct GroupRow(ObjectSubclass<imp::GroupRow>)
         @extends gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
 }
 
-impl GroupListRowContent {
+impl GroupRow {
     pub fn new(group: *const Group) -> Self {
         let group_ptr = NonNull::new(group as *mut Group)
             .expect("Invalid pointer to group");
 
         glib::Object::new(&[
             ("group", &group_ptr.cast::<Pointee>().to_value())
-        ]).expect("Failed to create `GroupListRowContent`.")
+        ]).expect("Failed to create `GroupRow`.")
     }
 
     pub fn empty() -> Self {
         glib::Object::new(&[])
-            .expect("Failed to create `GroupListRowContent`.")
+            .expect("Failed to create `GroupRow`.")
     }
 
     pub fn factory() -> SignalListItemFactory {
         let group_factory = gtk::SignalListItemFactory::new();
 
         group_factory.connect_setup(move |_, list_item| {
-            let row = GroupListRowContent::empty();
+            let row = GroupRow::empty();
 
             list_item.set_child(Some(&row));
 
             list_item
                 .property_expression("item")
-                .chain_property::<GroupListRowContent>("group")
+                .chain_property::<GroupRow>("group")
                 .bind(&row, "group", gtk::Widget::NONE);
         });
 
@@ -142,8 +142,8 @@ impl GroupListRowContent {
 
     pub fn search_expression() -> gtk::ClosureExpression {
         gtk::ClosureExpression::with_callback(gtk::Expression::NONE, |v| {
-            let row = v[0].get::<GroupListRowContent>()
-                .expect("Value is not a `GroupListRowContent`");
+            let row = v[0].get::<GroupRow>()
+                .expect("Value is not a `GroupRow`");
 
             let group = row.imp().group_ptr.borrow();
             unsafe {

@@ -132,7 +132,7 @@ impl BeedgetWindow {
         app_data!(|data| {
             data.init_group_model();
 
-            let filter = gtk::StringFilter::new(Some(GroupListRowContent::search_expression()));
+            let filter = gtk::StringFilter::new(Some(GroupRow::search_expression()));
             let filter_model = gtk::FilterListModel::new(data.group_model.get(), Some(&filter));
             let selection_model = gtk::SingleSelection::new(Some(&filter_model));
 
@@ -143,7 +143,7 @@ impl BeedgetWindow {
             self.imp().sidebar.set_model(Some(&selection_model));
         });
 
-        self.imp().sidebar.set_factory(Some(&GroupListRowContent::factory()));
+        self.imp().sidebar.set_factory(Some(&GroupRow::factory()));
 
         // Fill content with element selected by default
         self.set_content_page(&self.imp().sidebar.model().unwrap()
@@ -157,7 +157,7 @@ impl BeedgetWindow {
             let selected_object = filtered_model
                 .item(model.selected()).unwrap();
             let selected_group = selected_object
-                .downcast_ref::<GroupListRowContent>().unwrap()
+                .downcast_ref::<GroupRow>().unwrap()
                 .imp().group_ptr.borrow().unwrap();
 
             // If we try to create a new GroupContent from the same group as
