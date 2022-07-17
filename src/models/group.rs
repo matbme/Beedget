@@ -49,6 +49,20 @@ impl Group {
         self.transactions.borrow_mut().push(transaction);
     }
 
+    pub fn delete_transaction(&self, transaction_id: Uuid) {
+        let mut idx = 0;
+
+        for transaction in self.transactions.borrow().iter() {
+            if transaction.id == transaction_id {
+                break;
+            } else {
+                idx += 1;
+            }
+        }
+
+        self.transactions.borrow_mut().remove(idx);
+    }
+
     pub fn transaction_model(&self) -> gio::ListStore {
         let ls = gio::ListStore::new(TransactionRow::static_type());
 

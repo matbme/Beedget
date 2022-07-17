@@ -164,59 +164,104 @@ impl CreateTransactionDialog {
 
     #[template_callback]
     fn confirm_transaction(&self) {
-        // TODO: Special case for when group has changed
-        if self.imp().edit_transaction.get().is_some() { // Edit transaction
-            let transaction = unsafe {
-                (self.imp().edit_transaction.get().unwrap().clone() as *mut Transaction).as_mut().unwrap()
-            };
+        if self.imp().edit_transaction.get().is_some() {
+            let selected_group_id = unsafe { self.selected_group().as_ref().unwrap() }.id;
+            let current_group_id = unsafe {
+                self.imp().current_group.get().unwrap().clone().as_ref().unwrap()
+            }.id;
 
-            transaction.set_name(&self.imp().transaction_name.text());
-            transaction.change_tr_type(
+            if selected_group_id != current_group_id {
+                // Edit transaction, change group
+                self.change_transaction_group();
+            } else {
+                // Edit transaction, same group
+                self.edit_transaction();
+            }
+        } else {
+            // Create transaction
+            self.create_transaction();
+        }
+
+        app_data!(|data| {
+            data.save_group(unsafe { self.selected_group().as_ref().unwrap() });
+        });
+
+        self.destroy();
+    }
+
+    fn change_transaction_group(&self) {
+        let transaction = unsafe {
+            self.imp().edit_transaction.get().unwrap().clone().as_ref().unwrap()
+        };
+
+        let prev_group = unsafe {
+            self.imp().current_group.get().unwrap().clone().as_ref().unwrap()
+        };
+        prev_group.delete_transaction(transaction.id);
+
+        app_data!(|data| {
+            data.save_group(prev_group);
+        });
+
+        self.create_transaction();
+    }
+
+    fn edit_transaction(&self) {
+        let transaction = unsafe {
+            (self.imp().edit_transaction.get().unwrap().clone() as *mut Transaction).as_mut().unwrap()
+        };
+
+        transaction.set_name(&self.imp().transaction_name.text());
+        transaction.change_tr_type(
+            if self.imp().expense_check_button.is_active() {
+                TransactionType::EXPENSE
+            } else {
+                TransactionType::INCOME
+            }
+        );
+        transaction.set_amount(self.amount_entry_value().unwrap());
+        transaction.set_date(
+            glib::DateTime::from_iso8601(
+                self.imp().dt_picker.property::<glib::GString>("selected-date").as_str(),
+                None
+            ).expect("Invalid date")
+        );
+    }
+
+    fn create_transaction(&self) {
+        let transaction = Transaction::new(
+            &self.imp().transaction_name.text(),
+            {
                 if self.imp().expense_check_button.is_active() {
                     TransactionType::EXPENSE
                 } else {
                     TransactionType::INCOME
                 }
-            );
-            transaction.set_amount(self.amount_entry_value().unwrap());
-            transaction.set_date(
-                glib::DateTime::from_iso8601(
-                    self.imp().dt_picker.property::<glib::GString>("selected-date").as_str(),
-                    None
-                ).expect("Invalid date")
-            );
-        } else { // Create transaction
-            app_data!(|data| {
-                let transaction = Transaction::new(
-                    &self.imp().transaction_name.text(),
-                    {
-                        if self.imp().expense_check_button.is_active() {
-                            TransactionType::EXPENSE
-                        } else {
-                            TransactionType::INCOME
-                        }
-                    },
-                    self.amount_entry_value().unwrap(),
-                    glib::DateTime::from_iso8601(
-                        self.imp().dt_picker.property::<glib::GString>("selected-date").as_str(),
-                        None
-                    ).expect("Invalid date")
-                );
+            },
+            self.amount_entry_value().unwrap(),
+            glib::DateTime::from_iso8601(
+                self.imp().dt_picker.property::<glib::GString>("selected-date").as_str(),
+                None
+            ).expect("Invalid date")
+        );
 
-                let selected_group_idx = self.imp().group_select.selected();
-                let selected_group = &data.groups.borrow()[selected_group_idx as usize];
+        unsafe {
+            self.selected_group().as_ref().unwrap()
+        }.new_transaction(transaction);
+    }
 
-                selected_group.new_transaction(transaction);
-            });
-        }
+    fn selected_group(&self) -> *const Group {
+        let selected_group_idx = self.imp().group_select.selected();
 
-        app_data!(|data| {
-            let selected_group_idx = self.imp().group_select.selected();
-            let selected_group = &data.groups.borrow()[selected_group_idx as usize];
-            data.save_group(selected_group);
-        });
+        let filtered_model = self.imp().group_select.model().unwrap();
+        let selected_object = filtered_model
+            .item(selected_group_idx).unwrap();
 
-        self.destroy();
+        let selected_group = selected_object
+            .downcast_ref::<GroupListRowContent>().unwrap()
+            .imp().group_ptr.borrow().unwrap();
+
+        selected_group
     }
 
     /// Disables button if name and/or amount entries are empty

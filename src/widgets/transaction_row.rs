@@ -15,6 +15,8 @@ use crate::dialogs::*;
 use crate::models::*;
 use crate::widgets::*;
 
+use beedget::app_data;
+
 mod imp {
     use super::*;
 
@@ -122,11 +124,26 @@ impl TransactionRow {
 
         let delete_action = gio::SimpleAction::new("delete", None);
         delete_action.connect_activate(glib::clone!(@weak self as parent => move |_, _| {
-            println!("Delete");
+            let group = parent.parent().unwrap()
+                .parent().unwrap()
+                .downcast_ref::<GroupContent>().unwrap()
+                .imp().group_ptr.get().unwrap().clone();
+            let group = unsafe { group.as_ref().unwrap() };
+
+            group.delete_transaction(unsafe {
+                parent.imp().transaction_ptr.get().unwrap().clone().as_ref().unwrap()
+            }.id);
+            parent.save_group(group);
         }));
         transaction_action_group.add_action(&delete_action);
 
         self.insert_action_group("transaction", Some(&transaction_action_group));
+    }
+
+    fn save_group(&self, group: &Group) {
+        app_data!(|data| {
+            data.save_group(group);
+        });
     }
 
     fn init_row(&self) {
