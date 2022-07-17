@@ -1,11 +1,12 @@
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gdk, glib, CompositeTemplate};
-use glib::{ParamFlags, ParamSpec, ParamSpecPointer};
+use glib::{ParamFlags, ParamSpec, ParamSpecPointer, ParamSpecObject};
 use glib::types::Pointee;
 
 use adw::subclass::prelude::*;
 
+use uuid::Uuid;
 use once_cell::sync::{Lazy, OnceCell};
 
 use std::ptr::NonNull;
@@ -45,7 +46,7 @@ mod imp {
         pub amount_entry: TemplateChild<gtk::Entry>,
 
         pub edit_transaction: OnceCell<*const Transaction>,
-        pub current_group: OnceCell<*const Group>
+        pub current_group: OnceCell<Group>
     }
 
     #[glib::object_subclass]
@@ -73,10 +74,11 @@ mod imp {
                     "transaction",
                     ParamFlags::CONSTRUCT | ParamFlags::READWRITE
                 ),
-                ParamSpecPointer::new(
+                ParamSpecObject::new(
                     "group",
                     "group",
                     "group",
+                    Group::static_type(),
                     ParamFlags::CONSTRUCT | ParamFlags::READWRITE
                 )]
             });
@@ -96,9 +98,8 @@ mod imp {
                     }
                 }
                 "group" => {
-                    if let Ok(input) = value.get::<NonNull::<Pointee>>() {
-                        let ptr_cast = input.cast::<Group>();
-                        match self.current_group.set(ptr_cast.as_ptr()) {
+                    if let Ok(input) = value.get::<Group>() {
+                        match self.current_group.set(input) {
                             Ok(_) => obj.set_current_group(),
                             Err(_) => panic!("Group pointer was already set!")
                         }
@@ -143,17 +144,14 @@ impl TransactionDialog {
         ]).expect("Failed to create `TransactionDialog`.")
     }
 
-    pub fn edit(parent: &gtk::Window, edit_transaction: *const Transaction, group: *const Group) -> Self {
+    pub fn edit(parent: &gtk::Window, edit_transaction: *const Transaction, group: &Group) -> Self {
         let transaction_ptr = NonNull::new(edit_transaction as *mut Transaction)
             .expect("Invalid pointer to transaction");
-
-        let group_ptr = NonNull::new(group as *mut Group)
-            .expect("Invalid pointer to group");
 
         glib::Object::new(&[
             ("transient-for", &Some(parent)),
             ("transaction", &transaction_ptr.cast::<Pointee>().to_value()),
-            ("group", &group_ptr.cast::<Pointee>().to_value())
+            ("group", &group)
         ]).expect("Failed to create `TransactionDialog`.")
     }
 
@@ -165,25 +163,47 @@ impl TransactionDialog {
     #[template_callback]
     fn confirm_transaction(&self) {
         if self.imp().edit_transaction.get().is_some() {
-            let selected_group_id = unsafe { self.selected_group().as_ref().unwrap() }.id;
-            let current_group_id = unsafe {
-                self.imp().current_group.get().unwrap().clone().as_ref().unwrap()
-            }.id;
+            app_data!(|data| {
+                let selected_group_idx = self.imp().group_select.selected();
 
-            if selected_group_id != current_group_id {
-                // Edit transaction, change group
-                self.change_transaction_group();
-            } else {
-                // Edit transaction, same group
-                self.edit_transaction();
-            }
+                let selected_group = &data.group_model.get().unwrap()
+                    .item(selected_group_idx).unwrap()
+                    .downcast_ref::<GroupRow>().unwrap()
+                    .property::<Group>("group");
+
+                let selected_group_id = Uuid::parse_str(
+                    &selected_group
+                        .property::<glib::GString>("uid").to_string()
+                );
+
+                let current_group_id = Uuid::parse_str(
+                    &self.imp().current_group
+                        .get().unwrap()
+                        .property::<glib::GString>("uid").to_string()
+                );
+
+                if selected_group_id != current_group_id {
+                    // Edit transaction, change group
+                    self.change_transaction_group();
+                } else {
+                    // Edit transaction, same group
+                    self.edit_transaction();
+                }
+            });
         } else {
             // Create transaction
             self.create_transaction();
         }
 
         app_data!(|data| {
-            data.save_group(unsafe { self.selected_group().as_ref().unwrap() });
+            let selected_group_idx = self.imp().group_select.selected();
+
+            let selected_group = &data.group_model.get().unwrap()
+                .item(selected_group_idx).unwrap()
+                .downcast_ref::<GroupRow>().unwrap()
+                .property::<Group>("group");
+
+            data.save_group(selected_group);
         });
 
         self.destroy();
@@ -194,9 +214,7 @@ impl TransactionDialog {
             self.imp().edit_transaction.get().unwrap().clone().as_ref().unwrap()
         };
 
-        let prev_group = unsafe {
-            self.imp().current_group.get().unwrap().clone().as_ref().unwrap()
-        };
+        let prev_group = self.imp().current_group.get().unwrap();
         prev_group.delete_transaction(transaction.id);
 
         app_data!(|data| {
@@ -245,23 +263,16 @@ impl TransactionDialog {
             ).expect("Invalid date")
         );
 
-        unsafe {
-            self.selected_group().as_ref().unwrap()
-        }.new_transaction(transaction);
-    }
+        app_data!(|data| {
+            let selected_group_idx = self.imp().group_select.selected();
 
-    fn selected_group(&self) -> *const Group {
-        let selected_group_idx = self.imp().group_select.selected();
+            let selected_group = &data.group_model.get().unwrap()
+                .item(selected_group_idx).unwrap()
+                .downcast_ref::<GroupRow>().unwrap()
+                .property::<Group>("group");
 
-        let filtered_model = self.imp().group_select.model().unwrap();
-        let selected_object = filtered_model
-            .item(selected_group_idx).unwrap();
-
-        let selected_group = selected_object
-            .downcast_ref::<GroupRow>().unwrap()
-            .imp().group_ptr.borrow().unwrap();
-
-        selected_group
+            selected_group.new_transaction(transaction);
+        });
     }
 
     /// Disables button if name and/or amount entries are empty
@@ -361,16 +372,21 @@ impl TransactionDialog {
 
         let mut group_idx: u32 = 0;
 
-        let current_group_row_id = unsafe {
-            self.imp().current_group.get().unwrap().as_ref().unwrap()
-        }.id;
+        let current_group_row_id = Uuid::parse_str(
+            &self.imp().current_group
+                .get().unwrap()
+                .property::<glib::GString>("uid").to_string()
+        );
 
         for row in self.imp().group_select.model().unwrap().into_iter() {
-            let row_group_id = unsafe {
-                row
+            let row_group_id = Uuid::parse_str(
+                &row
                     .downcast_ref::<GroupRow>().unwrap()
-                    .imp().group_ptr.borrow().unwrap().as_ref().unwrap()
-            }.id;
+                    .imp()
+                    .group
+                    .borrow()
+                    .property::<glib::GString>("uid").to_string()
+            );
 
             if current_group_row_id == row_group_id {
                 break;

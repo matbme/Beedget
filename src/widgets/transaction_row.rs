@@ -116,7 +116,7 @@ impl TransactionRow {
                 parent.parent().unwrap().
                     parent().unwrap().
                     downcast_ref::<GroupContent>().unwrap().
-                    imp().group_ptr.get().unwrap().clone()
+                    imp().group.get().unwrap()
             );
             dialog.present();
         }));
@@ -124,11 +124,12 @@ impl TransactionRow {
 
         let delete_action = gio::SimpleAction::new("delete", None);
         delete_action.connect_activate(glib::clone!(@weak self as parent => move |_, _| {
-            let group = parent.parent().unwrap()
-                .parent().unwrap()
+            let group = parent.parent().unwrap();
+            let group = group
+                .parent().unwrap();
+            let group = group
                 .downcast_ref::<GroupContent>().unwrap()
-                .imp().group_ptr.get().unwrap().clone();
-            let group = unsafe { group.as_ref().unwrap() };
+                .imp().group.get().unwrap();
 
             group.delete_transaction(unsafe {
                 parent.imp().transaction_ptr.get().unwrap().clone().as_ref().unwrap()
