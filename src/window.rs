@@ -3,6 +3,7 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gio, glib, CompositeTemplate};
 
+use adw::prelude::BinExt;
 use adw::subclass::application_window::AdwApplicationWindowImpl;
 
 use crate::widgets::*;
@@ -29,7 +30,10 @@ mod imp {
         pub sidebar: TemplateChild<gtk::ListView>,
 
         #[template_child]
-        pub content: TemplateChild<gtk::Box>
+        pub content_pane: TemplateChild<gtk::Box>,
+
+        #[template_child]
+        pub content: TemplateChild<adw::Bin>
     }
 
     #[glib::object_subclass]
@@ -80,7 +84,7 @@ impl BeedgetWindow {
 
     #[template_callback]
     fn open_create_transaction_dialog(&self) {
-        let dialog = CreateTransactionDialog::new(self.upcast_ref());
+        let dialog = TransactionDialog::new(self.upcast_ref());
         dialog.present();
     }
 
@@ -111,7 +115,7 @@ impl BeedgetWindow {
     }
 
     fn show_create_group_dialog(&self) {
-        let dialog = CreateGroupDialog::new(self.upcast_ref());
+        let dialog = GroupDialog::new(self.upcast_ref());
         dialog.present();
     }
 
@@ -123,22 +127,58 @@ impl BeedgetWindow {
         }));
     }
 
-    /// Initialize sidebar with content from application data
+    /// Initialize sidebar with groups from application data
     fn init_sidebar(&self) {
         app_data!(|data| {
             data.init_group_model();
 
-            let filter = gtk::StringFilter::new(Some(GroupListRowContent::search_expression()));
+            let filter = gtk::StringFilter::new(Some(GroupRow::search_expression()));
             let filter_model = gtk::FilterListModel::new(data.group_model.get(), Some(&filter));
             let selection_model = gtk::SingleSelection::new(Some(&filter_model));
+
+            selection_model.connect_selected_notify(clone!(@weak self as win => move |model| {
+                win.set_content_page(model);
+            }));
 
             self.imp().sidebar.set_model(Some(&selection_model));
         });
 
-        self.imp().sidebar.set_factory(Some(&GroupListRowContent::factory()));
+        self.imp().sidebar.set_factory(Some(&GroupRow::factory()));
 
-        // TODO: Get rid of this
-        let empty_dialog = EmptyDialog::new();
-        self.imp().content.append(&empty_dialog);
+        // Fill content with element selected by default
+        self.set_content_page(&self.imp().sidebar.model().unwrap()
+            .downcast_ref::<gtk::SingleSelection>().unwrap());
+    }
+
+    /// Crates content page for selected group
+    fn set_content_page(&self, model: &gtk::SingleSelection) {
+        if model.selected() != gtk::INVALID_LIST_POSITION {
+            let filtered_model = model.model().unwrap();
+            let selected_object = filtered_model
+                .item(model.selected()).unwrap();
+            let selected_group = selected_object
+                .downcast_ref::<GroupRow>().unwrap()
+                .imp().group_ptr.borrow().unwrap();
+
+            // If we try to create a new GroupContent from the same group as
+            // the currently constructed view, the application freezes
+            if let Some(child) = self.imp().content.child() {
+                let child_id = unsafe { child
+                    .downcast_ref::<GroupContent>().unwrap()
+                    .imp().group_ptr.get().unwrap()
+                    .as_ref().unwrap()
+                }.id;
+
+                let new_id = unsafe { selected_group.as_ref().unwrap() }.id;
+
+                if child_id != new_id {
+                    let content_page = GroupContent::new(unsafe { selected_group.as_ref().unwrap() });
+                    self.imp().content.set_child(Some(&content_page));
+                }
+            } else {
+                let content_page = GroupContent::new(unsafe { selected_group.as_ref().unwrap() });
+                self.imp().content.set_child(Some(&content_page));
+            }
+        }
     }
 }

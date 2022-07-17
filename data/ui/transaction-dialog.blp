@@ -1,7 +1,7 @@
 using Gtk 4.0;
 using Adw 1;
 
-template CreateTransactionDialog : Adw.Window {
+template TransactionDialog : Adw.Window {
   modal: true;
   default-width: 400;
 
@@ -27,7 +27,7 @@ template CreateTransactionDialog : Adw.Window {
       Button add_button {
         styles ["suggested-action"]
         label: _("Create");
-        clicked => create_transaction() swapped;
+        clicked => confirm_transaction() swapped;
       }
     }
 

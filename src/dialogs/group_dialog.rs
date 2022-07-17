@@ -17,8 +17,8 @@ mod imp {
     use super::*;
 
     #[derive(Debug, Default, CompositeTemplate)]
-    #[template(resource = "/com/github/matbme/beedget/ui/create-group-dialog.ui")]
-    pub struct CreateGroupDialog {
+    #[template(resource = "/com/github/matbme/beedget/ui/group-dialog.ui")]
+    pub struct GroupDialog {
         #[template_child]
         pub add_button: TemplateChild<gtk::Button>,
 
@@ -38,9 +38,9 @@ mod imp {
     }
 
     #[glib::object_subclass]
-    impl ObjectSubclass for CreateGroupDialog {
-        const NAME: &'static str = "CreateGroupDialog";
-        type Type = super::CreateGroupDialog;
+    impl ObjectSubclass for GroupDialog {
+        const NAME: &'static str = "GroupDialog";
+        type Type = super::GroupDialog;
         type ParentType = adw::Window;
 
         fn class_init(klass: &mut Self::Class) {
@@ -53,7 +53,7 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for CreateGroupDialog {
+    impl ObjectImpl for GroupDialog {
         fn constructed(&self, obj: &Self::Type) {
             self.parent_constructed(obj);
 
@@ -69,24 +69,24 @@ mod imp {
             obj.connect_add_button_to_entry_size();
         }
     }
-    impl WidgetImpl for CreateGroupDialog {}
-    impl WindowImpl for CreateGroupDialog {}
-    impl AdwWindowImpl for CreateGroupDialog {}
+    impl WidgetImpl for GroupDialog {}
+    impl WindowImpl for GroupDialog {}
+    impl AdwWindowImpl for GroupDialog {}
 }
 
 glib::wrapper! {
-    pub struct CreateGroupDialog(ObjectSubclass<imp::CreateGroupDialog>)
+    pub struct GroupDialog(ObjectSubclass<imp::GroupDialog>)
         @extends gtk::Window, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget,
                     gtk::Native, gtk::Root, gtk::ShortcutManager;
 }
 
 #[gtk::template_callbacks]
-impl CreateGroupDialog {
+impl GroupDialog {
     pub fn new(parent: &gtk::Window) -> Self {
         glib::Object::new(&[
             ("transient-for", &Some(parent))
-        ]).expect("Failed to create `CreateGroupDialog`.")
+        ]).expect("Failed to create `GroupDialog`.")
     }
 
     #[template_callback]

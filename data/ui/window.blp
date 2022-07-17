@@ -49,7 +49,7 @@ template BeedgetWindow : Adw.ApplicationWindow {
 
     Separator {}
 
-    Box content {
+    Box content_pane {
       orientation: vertical;
       hexpand: true;
 
@@ -72,6 +72,8 @@ template BeedgetWindow : Adw.ApplicationWindow {
           menu-model: primary_menu;
         }
       }
+
+      Adw.Bin content {}
     }
   }
 }

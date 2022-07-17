@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <gresources>
   <gresource prefix="/com/github/matbme/beedget">
-    <file>ui/create-group-dialog.ui</file>
-    <file>ui/create-transaction-dialog.ui</file>
+    <file>ui/style.css</file>
     <file>ui/date-time-picker.ui</file>
-    <file>ui/empty-dialog.ui</file>
-    <file>ui/group-list-row-content.ui</file>
+    <file>ui/group-content.ui</file>
+    <file>ui/group-dialog.ui</file>
+    <file>ui/group-row.ui</file>
     <file>ui/help-overlay.ui</file>
+    <file>ui/transaction-dialog.ui</file>
+    <file>ui/transaction-row.ui</file>
     <file>ui/window.ui</file>
   </gresource>
   <gresource prefix="/com/github/matbme/beedget/icons/scalable/actions">

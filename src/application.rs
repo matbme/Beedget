@@ -1,15 +1,21 @@
-use once_cell::sync::OnceCell;
+use once_cell::sync::{Lazy, OnceCell};
 use std::path::{Path, PathBuf};
 
 use glib::clone;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{gio, glib};
+use gtk::{gdk, gio, glib};
 use adw::subclass::prelude::*;
 
 use crate::config::VERSION;
 use crate::BeedgetWindow;
 use crate::models::SaveData;
+
+pub static CLOCK_FORMAT: Lazy<String> = Lazy::new(|| {
+    let desktop_settings = gio::Settings::new("org.gnome.desktop.interface");
+
+    desktop_settings.string("clock-format").to_string()
+});
 
 mod imp {
     use super::*;
@@ -42,6 +48,7 @@ mod imp {
 
             obj.load_data();
             obj.setup_gactions();
+            obj.load_css();
             obj.set_accels_for_action("app.quit", &["<primary>q"]);
         }
     }
@@ -121,5 +128,17 @@ impl BeedgetApplication {
         };
 
         self.imp().data.set(SaveData::new(&data_buf)).expect("Failed to load save data.");
+    }
+
+    fn load_css(&self) {
+        self.connect_startup(glib::clone!(@weak self as app => move |_| {
+            let provider = gtk::CssProvider::new();
+            provider.load_from_data(include_bytes!("../data/ui/style.css"));
+
+            gtk::StyleContext::add_provider_for_display(
+                &gdk::Display::default().expect("Failed to get default display"),
+                &provider,
+                gtk::STYLE_PROVIDER_PRIORITY_APPLICATION);
+        }));
     }
 }

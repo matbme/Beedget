@@ -21,9 +21,9 @@ run_command(
 rust_sources = files(
   'application.rs',
   'config.rs',
-  'dialogs/create_group_dialog.rs',
-  'dialogs/create_transaction_dialog.rs',
+  'dialogs/group_dialog.rs',
   'dialogs/mod.rs',
+  'dialogs/transaction_dialog.rs',
   'lib.rs',
   'main.rs',
   'models/data_object.rs',
@@ -32,8 +32,9 @@ rust_sources = files(
   'models/save_data.rs',
   'models/transaction.rs',
   'widgets/date_time_picker.rs',
-  'widgets/empty_dialog.rs',
-  'widgets/group_list_row_content.rs',
+  'widgets/group_content.rs',
+  'widgets/group_row.rs',
+  'widgets/transaction_row.rs',
   'widgets/mod.rs',
   'window.rs',
 )

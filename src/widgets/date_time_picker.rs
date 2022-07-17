@@ -1,7 +1,7 @@
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{glib, CompositeTemplate};
-use glib::{ParamFlags, ParamSpec, ParamSpecGType};
+use glib::{ParamFlags, ParamSpec, ParamSpecString};
 
 use once_cell::sync::Lazy;
 use derivative::*;
@@ -60,23 +60,30 @@ mod imp {
     impl ObjectImpl for DateTimePicker {
         fn properties() -> &'static [glib::ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecGType::new(
+                vec![ParamSpecString::new(
                     "selected-date",
                     "selected-date",
                     "selected-date",
-                    glib::DateTime::static_type(),
-                    ParamFlags::READABLE
+                    None,
+                    ParamFlags::READWRITE
                 )]
             });
 
             PROPERTIES.as_ref()
         }
 
-        fn set_property(&self, _obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
+        fn set_property(&self, obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
             match pspec.name() {
                 "selected-date" => {
                     if let Ok(input) = value.get() {
-                        self.selected_date.replace(input);
+                        self.selected_date.replace(
+                            glib::DateTime::from_iso8601(input, None)
+                                .expect("Invalid date")
+                        );
+
+                        obj.update_date_entry_text();
+                        obj.update_hour_entry();
+                        obj.update_minute_entry();
                     }
                 }
                 _ => unimplemented!()
@@ -85,7 +92,8 @@ mod imp {
 
         fn property(&self, _obj: &Self::Type, _id: usize, pspec: &ParamSpec) -> glib::Value {
             match pspec.name() {
-                "selected-date" => self.selected_date.borrow().to_value(),
+                "selected-date" => self.selected_date.borrow().format_iso8601()
+                    .expect("Invalid date").to_value(),
                 _ => unimplemented!()
             }
         }
@@ -299,7 +307,7 @@ impl DateTimePicker {
         }));
     }
 
-    /// `GLib::Date set_parse` wasn't warking so I made my own unsafe binding to
+    /// `GLib::Date set_parse` wasn't working so I made my own unsafe binding to
     /// g_date_set_parse out of spite
     fn parse_date(&self) -> Option<glib::DateTime> {
         let mut parsed_date = glib::ffi::GDate {

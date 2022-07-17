@@ -1,0 +1,35 @@
+using Gtk 4.0;
+using Adw 1;
+
+template TransactionRow: Adw.ActionRow {
+  selectable: false;
+
+  [suffix]
+  Box {
+    orientation: horizontal;
+    spacing: 30;
+
+    Label amount_label {
+      valign: center;
+    }
+
+    MenuButton options_button {
+      icon-name: "open-menu-symbolic";
+      valign: center;
+      menu-model: transaction_options_menu;
+    }
+  }
+}
+
+menu transaction_options_menu {
+  section {
+    item {
+      label: _("Edit");
+      action: "transaction.edit";
+    }
+    item {
+      label: _("Delete");
+      action: "transaction.delete";
+    }
+  }
+}
