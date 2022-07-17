@@ -84,7 +84,7 @@ impl BeedgetWindow {
 
     #[template_callback]
     fn open_create_transaction_dialog(&self) {
-        let dialog = CreateTransactionDialog::new(self.upcast_ref());
+        let dialog = TransactionDialog::new(self.upcast_ref());
         dialog.present();
     }
 
@@ -115,7 +115,7 @@ impl BeedgetWindow {
     }
 
     fn show_create_group_dialog(&self) {
-        let dialog = CreateGroupDialog::new(self.upcast_ref());
+        let dialog = GroupDialog::new(self.upcast_ref());
         dialog.present();
     }
 

@@ -18,8 +18,8 @@ mod imp {
     use super::*;
 
     #[derive(Debug, Default, CompositeTemplate)]
-    #[template(resource = "/com/github/matbme/beedget/ui/create-transaction-dialog.ui")]
-    pub struct CreateTransactionDialog {
+    #[template(resource = "/com/github/matbme/beedget/ui/transaction-dialog.ui")]
+    pub struct TransactionDialog {
         #[template_child]
         pub add_button: TemplateChild<gtk::Button>,
 
@@ -49,9 +49,9 @@ mod imp {
     }
 
     #[glib::object_subclass]
-    impl ObjectSubclass for CreateTransactionDialog {
-        const NAME: &'static str = "CreateTransactionDialog";
-        type Type = super::CreateTransactionDialog;
+    impl ObjectSubclass for TransactionDialog {
+        const NAME: &'static str = "TransactionDialog";
+        type Type = super::TransactionDialog;
         type ParentType = adw::Window;
 
         fn class_init(klass: &mut Self::Class) {
@@ -64,7 +64,7 @@ mod imp {
         }
     }
 
-    impl ObjectImpl for CreateTransactionDialog {
+    impl ObjectImpl for TransactionDialog {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
                 vec![ParamSpecPointer::new(
@@ -123,24 +123,24 @@ mod imp {
             }
         }
     }
-    impl WidgetImpl for CreateTransactionDialog {}
-    impl WindowImpl for CreateTransactionDialog {}
-    impl AdwWindowImpl for CreateTransactionDialog {}
+    impl WidgetImpl for TransactionDialog {}
+    impl WindowImpl for TransactionDialog {}
+    impl AdwWindowImpl for TransactionDialog {}
 }
 
 glib::wrapper! {
-    pub struct CreateTransactionDialog(ObjectSubclass<imp::CreateTransactionDialog>)
+    pub struct TransactionDialog(ObjectSubclass<imp::TransactionDialog>)
         @extends gtk::Window, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget,
                     gtk::Native, gtk::Root, gtk::ShortcutManager;
 }
 
 #[gtk::template_callbacks]
-impl CreateTransactionDialog {
+impl TransactionDialog {
     pub fn new(parent: &gtk::Window) -> Self {
         glib::Object::new(&[
             ("transient-for", &Some(parent))
-        ]).expect("Failed to create `CreateTransactionDialog`.")
+        ]).expect("Failed to create `TransactionDialog`.")
     }
 
     pub fn edit(parent: &gtk::Window, edit_transaction: *const Transaction, group: *const Group) -> Self {
@@ -154,7 +154,7 @@ impl CreateTransactionDialog {
             ("transient-for", &Some(parent)),
             ("transaction", &transaction_ptr.cast::<Pointee>().to_value()),
             ("group", &group_ptr.cast::<Pointee>().to_value())
-        ]).expect("Failed to create `CreateTransactionDialog`.")
+        ]).expect("Failed to create `TransactionDialog`.")
     }
 
     #[template_callback]

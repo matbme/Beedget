@@ -21,9 +21,9 @@ run_command(
 rust_sources = files(
   'application.rs',
   'config.rs',
-  'dialogs/create_group_dialog.rs',
-  'dialogs/create_transaction_dialog.rs',
+  'dialogs/group_dialog.rs',
   'dialogs/mod.rs',
+  'dialogs/transaction_dialog.rs',
   'lib.rs',
   'main.rs',
   'models/data_object.rs',

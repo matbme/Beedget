@@ -110,7 +110,7 @@ impl TransactionRow {
 
         let edit_action = gio::SimpleAction::new("edit", None);
         edit_action.connect_activate(glib::clone!(@weak self as parent => move |_, _| {
-            let dialog = CreateTransactionDialog::edit(
+            let dialog = TransactionDialog::edit(
                 parent.root().unwrap().downcast_ref::<gtk::Window>().unwrap(),
                 parent.imp().transaction_ptr.get().unwrap().clone(),
                 parent.parent().unwrap().
