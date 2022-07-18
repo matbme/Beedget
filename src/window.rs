@@ -6,6 +6,8 @@ use gtk::{gio, glib, CompositeTemplate};
 use adw::prelude::BinExt;
 use adw::subclass::application_window::AdwApplicationWindowImpl;
 
+use uuid::Uuid;
+
 use crate::widgets::*;
 use crate::dialogs::*;
 
@@ -158,25 +160,31 @@ impl BeedgetWindow {
                 .item(model.selected()).unwrap();
             let selected_group = selected_object
                 .downcast_ref::<GroupRow>().unwrap()
-                .imp().group_ptr.borrow().unwrap();
+                .imp().group.borrow();
 
             // If we try to create a new GroupContent from the same group as
             // the currently constructed view, the application freezes
             if let Some(child) = self.imp().content.child() {
-                let child_id = unsafe { child
-                    .downcast_ref::<GroupContent>().unwrap()
-                    .imp().group_ptr.get().unwrap()
-                    .as_ref().unwrap()
-                }.id;
+                let child_id = Uuid::parse_str(
+                    &child
+                        .downcast_ref::<GroupContent>().unwrap()
+                        .imp()
+                        .group
+                        .get().unwrap()
+                        .property::<glib::GString>("uid").to_string()
+                );
 
-                let new_id = unsafe { selected_group.as_ref().unwrap() }.id;
+                let new_id = Uuid::parse_str(
+                    &selected_group
+                        .property::<glib::GString>("uid").to_string()
+                );
 
                 if child_id != new_id {
-                    let content_page = GroupContent::new(unsafe { selected_group.as_ref().unwrap() });
+                    let content_page = GroupContent::new(&selected_group);
                     self.imp().content.set_child(Some(&content_page));
                 }
             } else {
-                let content_page = GroupContent::new(unsafe { selected_group.as_ref().unwrap() });
+                let content_page = GroupContent::new(&selected_group);
                 self.imp().content.set_child(Some(&content_page));
             }
         }

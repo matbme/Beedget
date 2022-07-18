@@ -1,12 +1,9 @@
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{glib, CompositeTemplate};
-use glib::{ParamFlags, ParamSpec, ParamSpecPointer};
-use glib::types::Pointee;
+use glib::{ParamFlags, ParamSpec, ParamSpecObject};
 
 use once_cell::sync::{Lazy, OnceCell};
-
-use std::ptr::NonNull;
 
 use crate::models::*;
 use crate::widgets::*;
@@ -20,7 +17,7 @@ mod imp {
         #[template_child]
         pub transaction_history: TemplateChild<gtk::ListBox>,
 
-        pub group_ptr: OnceCell<*const Group>
+        pub group: OnceCell<Group>
     }
 
     #[glib::object_subclass]
@@ -41,10 +38,11 @@ mod imp {
     impl ObjectImpl for GroupContent {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecPointer::new(
+                vec![ParamSpecObject::new(
                     "group",
                     "group",
                     "group",
+                    Group::static_type(),
                     ParamFlags::CONSTRUCT | ParamFlags::WRITABLE
                 )]
             });
@@ -55,9 +53,8 @@ mod imp {
         fn set_property(&self, obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
             match pspec.name() {
                 "group" => {
-                    if let Ok(input) = value.get::<NonNull::<Pointee>>() {
-                        let ptr_cast = input.cast::<Group>();
-                        match self.group_ptr.set(ptr_cast.as_ptr()) {
+                    if let Ok(input) = value.get::<Group>() {
+                        match self.group.set(input) {
                             Ok(_) => obj.init_transaction_history(),
                             Err(_) => panic!("Group pointer was already set!"),
                         }
@@ -83,21 +80,14 @@ glib::wrapper! {
 }
 
 impl GroupContent {
-    pub fn new(group: *const Group) -> Self {
-        let group_ptr = NonNull::new(group as *mut Group)
-            .expect("Invalid pointer to group");
-
+    pub fn new(group: &Group) -> Self {
         glib::Object::new(&[
-            ("group", &group_ptr.cast::<Pointee>().to_value()),
+            ("group", &group),
         ]).expect("Failed to create `GroupContent`.")
     }
 
     fn init_transaction_history(&self) {
-        let model = unsafe {
-            (*self.imp().group_ptr.get().unwrap())
-                .as_ref().unwrap()
-                .transaction_model()
-        };
+        let model = self.imp().group.get().unwrap().transaction_model();
 
         self.imp().transaction_history.bind_model(
             Some(&model),

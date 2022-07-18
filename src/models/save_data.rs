@@ -9,7 +9,7 @@ use once_cell::sync::OnceCell;
 use gtk::prelude::*;
 use gtk::gio;
 
-use crate::models::{DataObject, Group};
+use crate::models::Group;
 use crate::widgets::*;
 
 #[derive(Default, Debug)]

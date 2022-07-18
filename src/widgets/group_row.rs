@@ -1,15 +1,14 @@
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{glib, CompositeTemplate, SignalListItemFactory};
+use glib::{ParamFlags, ParamSpec, ParamSpecObject};
+
 use gtk::cairo::{LineJoin, LinearGradient};
-use glib::{ParamFlags, ParamSpec, ParamSpecPointer};
-use glib::types::Pointee;
 
 use once_cell::sync::Lazy;
 
 use std::cell::RefCell;
 use std::f64::consts::PI;
-use std::ptr::NonNull;
 
 use crate::force;
 use crate::models::*;
@@ -32,7 +31,7 @@ mod imp {
         #[template_child]
         pub name: TemplateChild<gtk::Label>,
 
-        pub group_ptr: RefCell<Option<*const Group>>,
+        pub group: RefCell<Group>,
     }
 
     #[glib::object_subclass]
@@ -53,10 +52,11 @@ mod imp {
     impl ObjectImpl for GroupRow {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecPointer::new(
+                vec![ParamSpecObject::new(
                     "group",
                     "group",
                     "group",
+                    Group::static_type(),
                     ParamFlags::CONSTRUCT | ParamFlags::READWRITE
                 )]
             });
@@ -67,9 +67,8 @@ mod imp {
         fn set_property(&self, obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
             match pspec.name() {
                 "group" => {
-                    if let Ok(input) = value.get::<NonNull::<Pointee>>() {
-                        let ptr_cast = input.cast::<Group>();
-                        self.group_ptr.replace(Some(ptr_cast.as_ptr()));
+                    if let Ok(input) = value.get::<Group>() {
+                        self.group.replace(input);
                         obj.set_icon_emoji();
                         obj.set_draw_func();
                         obj.set_label();
@@ -81,12 +80,7 @@ mod imp {
 
         fn property(&self, _obj: &Self::Type, _id: usize, pspec: &ParamSpec) -> glib::Value {
             match pspec.name() {
-                "group" => {
-                    let group = NonNull::new(self.group_ptr.borrow().unwrap() as *mut Group)
-                        .expect("Group is invalid");
-
-                    group.cast::<Pointee>().to_value()
-                }
+                "group" => self.group.borrow().to_value(),
                 _ => unimplemented!()
             }
         }
@@ -109,12 +103,9 @@ glib::wrapper! {
 }
 
 impl GroupRow {
-    pub fn new(group: *const Group) -> Self {
-        let group_ptr = NonNull::new(group as *mut Group)
-            .expect("Invalid pointer to group");
-
+    pub fn new(group: &Group) -> Self {
         glib::Object::new(&[
-            ("group", &group_ptr.cast::<Pointee>().to_value())
+            ("group", &group)
         ]).expect("Failed to create `GroupRow`.")
     }
 
@@ -145,10 +136,8 @@ impl GroupRow {
             let row = v[0].get::<GroupRow>()
                 .expect("Value is not a `GroupRow`");
 
-            let group = row.imp().group_ptr.borrow();
-            unsafe {
-                group.unwrap().as_ref().unwrap().name.clone()
-            }
+            let group = row.imp().group.borrow();
+            group.property::<glib::GString>("name").to_string()
         })
     }
 
@@ -172,9 +161,7 @@ impl GroupRow {
             ctx.set_tolerance(0.1);
             ctx.set_line_join(LineJoin::Bevel);
 
-            let color = unsafe {
-                parent.imp().group_ptr.borrow().unwrap().as_ref().unwrap()
-            }.rgba_color();
+            let color = parent.imp().group.borrow().rgba_color();
             ctx.set_source_rgb(color.red() as f64, color.green() as f64, color.blue() as f64);
 
             let gradient = LinearGradient::new(allocation_x,
@@ -220,17 +207,16 @@ impl GroupRow {
     }
 
     fn set_label(&self) {
-        let label = &unsafe {
-            self.imp().group_ptr.borrow().unwrap().as_ref().unwrap()
-        }.name;
+        let label = self.imp().group
+            .borrow()
+            .property::<glib::GString>("name")
+            .to_string();
 
         self.imp().name.set_label(&label);
     }
 
     fn set_icon_emoji(&self) {
-        let icon = &unsafe {
-            self.imp().group_ptr.borrow().unwrap().as_ref().unwrap()
-        }.emoji;
+        let icon = self.imp().group.borrow().property::<glib::GString>("emoji").to_string();
 
         self.imp().icon_emoji.set_label(&icon);
         self.imp().overlay.add_overlay(self.imp().icon_emoji.upcast_ref::<gtk::Label>());
