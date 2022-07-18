@@ -25,6 +25,8 @@ mod imp {
         pub name: String,
         pub emoji: String,
         pub color: Vec<f32>,
+        // TODO: Impl custom serialize/deserialize which calls
+        // function for inner type
         pub transactions: RefCell<Vec<Transaction>>,
     }
 
@@ -174,7 +176,7 @@ impl Group {
         let mut idx = 0;
 
         for transaction in self.imp().inner.borrow().transactions.borrow().iter() {
-            if transaction.id == transaction_id {
+            if transaction.id() == transaction_id {
                 break;
             } else {
                 idx += 1;

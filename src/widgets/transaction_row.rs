@@ -1,15 +1,12 @@
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gio, glib, CompositeTemplate};
-use glib::{ParamFlags, ParamSpec, ParamSpecPointer};
-use glib::types::Pointee;
+use glib::{ParamFlags, ParamSpec, ParamSpecObject};
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
 
 use once_cell::sync::{Lazy, OnceCell};
-
-use std::ptr::NonNull;
 
 use crate::dialogs::*;
 use crate::models::*;
@@ -29,7 +26,7 @@ mod imp {
         #[template_child]
         pub options_button: TemplateChild<gtk::MenuButton>,
 
-        pub transaction_ptr: OnceCell<*const Transaction>
+        pub transaction: OnceCell<Transaction>
     }
 
     #[glib::object_subclass]
@@ -50,10 +47,11 @@ mod imp {
     impl ObjectImpl for TransactionRow {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecPointer::new(
+                vec![ParamSpecObject::new(
                     "transaction",
                     "transaction",
                     "transaction",
+                    Transaction::static_type(),
                     ParamFlags::CONSTRUCT | ParamFlags::READWRITE
                 )]
             });
@@ -64,9 +62,8 @@ mod imp {
         fn set_property(&self, obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
             match pspec.name() {
                 "transaction" => {
-                    if let Ok(input) = value.get::<NonNull::<Pointee>>() {
-                        let ptr_cast = input.cast::<Transaction>();
-                        match self.transaction_ptr.set(ptr_cast.as_ptr()) {
+                    if let Ok(input) = value.get::<Transaction>() {
+                        match self.transaction.set(input) {
                             Ok(_) => obj.init_row(),
                             Err(_) => panic!("Transaction pointer was already set!")
                         }
@@ -96,12 +93,9 @@ glib::wrapper! {
 }
 
 impl TransactionRow {
-    pub fn new(transaction: *const Transaction) -> Self {
-        let transaction_ptr = NonNull::new(transaction as *mut Transaction)
-            .expect("Invalid pointer to transaction");
-
+    pub fn new(transaction: &Transaction) -> Self {
         glib::Object::new(&[
-            ("transaction", &transaction_ptr.cast::<Pointee>().to_value()),
+            ("transaction", &transaction),
         ]).expect("Failed to create `TransactionRow`.")
     }
 
@@ -112,7 +106,7 @@ impl TransactionRow {
         edit_action.connect_activate(glib::clone!(@weak self as parent => move |_, _| {
             let dialog = TransactionDialog::edit(
                 parent.root().unwrap().downcast_ref::<gtk::Window>().unwrap(),
-                parent.imp().transaction_ptr.get().unwrap().clone(),
+                parent.imp().transaction.get().unwrap(),
                 parent.parent().unwrap().
                     parent().unwrap().
                     downcast_ref::<GroupContent>().unwrap().
@@ -131,9 +125,7 @@ impl TransactionRow {
                 .downcast_ref::<GroupContent>().unwrap()
                 .imp().group.get().unwrap();
 
-            group.delete_transaction(unsafe {
-                parent.imp().transaction_ptr.get().unwrap().clone().as_ref().unwrap()
-            }.id);
+            group.delete_transaction(parent.imp().transaction.get().unwrap().id());
             parent.save_group(group);
         }));
         transaction_action_group.add_action(&delete_action);
@@ -148,9 +140,7 @@ impl TransactionRow {
     }
 
     fn init_row(&self) {
-        let amount = unsafe {
-            self.imp().transaction_ptr.get().unwrap().as_ref().unwrap()
-        }.signed_amount();
+        let amount = self.imp().transaction.get().unwrap().signed_amount();
 
         self.imp().amount_label.set_label(&format!("{:.2}", amount.abs()));
 
@@ -160,12 +150,7 @@ impl TransactionRow {
             self.imp().amount_label.add_css_class("expense");
         }
 
-        self.set_title(&unsafe {
-            self.imp().transaction_ptr.get().unwrap().as_ref().unwrap()
-        }.name);
-
-        self.set_subtitle(&unsafe {
-            self.imp().transaction_ptr.get().unwrap().as_ref().unwrap()
-        }.relative_date());
+        self.set_title(&self.imp().transaction.get().unwrap().name());
+        self.set_subtitle(&self.imp().transaction.get().unwrap().relative_date());
     }
 }

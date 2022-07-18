@@ -1,7 +1,16 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use gtk::glib::DateTime;
+use gtk::prelude::*;
+use gtk::subclass::prelude::*;
+use gtk::glib;
+use glib::{DateTime, ParamFlags, ParamSpec, ParamSpecString, ParamSpecFloat};
+
+use once_cell::sync::Lazy;
+
+use derivative::Derivative;
+
+use std::cell::RefCell;
 
 use crate::application::CLOCK_FORMAT;
 
@@ -11,50 +20,203 @@ pub enum TransactionType {
     INCOME
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Transaction {
-    pub id: Uuid,
-    pub name: String,
-    pub tr_type: TransactionType,
-    pub amount: f32,
-    date: String
+pub fn transaction_type_to_string(tr_type: &TransactionType) -> String {
+    match tr_type {
+        TransactionType::EXPENSE => String::from("EXPENSE"),
+        TransactionType::INCOME => String::from("INCOME"),
+    }
+}
+
+mod imp {
+    use super::*;
+
+    #[derive(Derivative, Debug, Serialize, Deserialize)]
+    #[derivative(Default)]
+    pub struct TransactionInner {
+        pub id: Uuid,
+        pub name: String,
+        #[derivative(Default(value="TransactionType::EXPENSE"))]
+        pub tr_type: TransactionType,
+        pub amount: f32,
+        pub date: String
+    }
+
+    #[derive(Default)]
+    pub struct Transaction {
+        pub inner: RefCell<TransactionInner>
+    }
+
+    #[glib::object_subclass]
+    impl ObjectSubclass for Transaction {
+        const NAME: &'static str = "Transaction";
+        type Type = super::Transaction;
+        type ParentType = glib::Object;
+    }
+
+    impl ObjectImpl for Transaction {
+        fn properties() -> &'static [ParamSpec] {
+            static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
+                vec![ParamSpecString::new(
+                    "uid",
+                    "uid",
+                    "uid",
+                    None,
+                    ParamFlags::READWRITE
+                ),
+                ParamSpecString::new(
+                    "name",
+                    "name",
+                    "name",
+                    None,
+                    ParamFlags::READWRITE
+                ),
+                ParamSpecString::new(
+                    "ty-type",
+                    "ty-type",
+                    "ty-type",
+                    None,
+                    ParamFlags::READWRITE
+                ),
+                ParamSpecFloat::new(
+                    "amount",
+                    "amount",
+                    "amount",
+                    std::f32::MIN,
+                    std::f32::MAX,
+                    0.0,
+                    ParamFlags::READWRITE
+                 ),
+                ParamSpecString::new(
+                    "date",
+                    "date",
+                    "date",
+                    None,
+                    ParamFlags::READWRITE
+                )]
+            });
+
+            PROPERTIES.as_ref()
+        }
+
+        fn set_property(&self, _obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
+            match pspec.name() {
+                "uid" => self.inner.borrow_mut().id = Uuid::parse_str(value.get().unwrap()).unwrap(),
+                "name" => self.inner.borrow_mut().name = value.get().unwrap(),
+                "tr-type" => {
+                    let tr_type = value.get().unwrap();
+                    match tr_type {
+                        "EXPENSE" => self.inner.borrow_mut().tr_type = TransactionType::EXPENSE,
+                        "INCOME" => self.inner.borrow_mut().tr_type = TransactionType::INCOME,
+                        _ => unimplemented!()
+                    }
+                }
+                "amount" => self.inner.borrow_mut().amount = value.get().unwrap(),
+                "date" => self.inner.borrow_mut().amount = value.get().unwrap(),
+                _ => unimplemented!()
+            }
+        }
+
+        fn property(&self, _obj: &Self::Type, _id: usize, pspec: &ParamSpec) -> glib::Value {
+            match pspec.name() {
+                "uid" => self.inner.borrow().id.to_string().to_value(),
+                "name" => self.inner.borrow().name.to_value(),
+                "tr_type" => transaction_type_to_string(&self.inner.borrow().tr_type).to_value(),
+                "amount" => self.inner.borrow().amount.to_value(),
+                "date" => self.inner.borrow().date.to_value(),
+                _ => unimplemented!()
+            }
+        }
+    }
+}
+
+glib::wrapper! {
+    pub struct Transaction(ObjectSubclass<imp::Transaction>);
+}
+
+impl Default for Transaction {
+    fn default() -> Self {
+        Self::empty()
+    }
+}
+
+impl Serialize for Transaction {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where
+        S: serde::Serializer {
+        self.imp().inner.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Transaction {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where
+        D: serde::Deserializer<'de> {
+        let inner = imp::TransactionInner::deserialize(deserializer)?;
+        let transaction: Self = glib::Object::new(&[])
+            .expect("Failed to create Transaction");
+
+        transaction.imp().inner.replace(inner);
+
+        Ok(transaction)
+    }
 }
 
 impl Transaction {
     pub fn new(name: &str, tr_type: TransactionType, amount: f32, date: DateTime) -> Self {
-        Self {
-            id: Uuid::new_v4(),
-            name: String::from(name),
-            tr_type,
-            amount,
-            date: String::from(date.format_iso8601().unwrap().as_str())
+        glib::Object::new(&[
+            ("uid", &Uuid::new_v4().to_string()),
+            ("name", &name),
+            ("tr_type", &transaction_type_to_string(&tr_type)),
+            ("amount", &amount),
+            ("date", &date.format_iso8601().unwrap().as_str())
+        ]).expect("Failed to create Transaction")
+    }
+
+    pub fn empty() -> Self {
+        glib::Object::new(&[]).expect("Failed to create Transaction")
+    }
+
+    pub fn id(&self) -> Uuid {
+        self.imp().inner.borrow().id
+    }
+
+    pub fn name(&self) -> String {
+        self.imp().inner.borrow().name.clone()
+    }
+
+    pub fn amount(&self) -> f32 {
+        self.imp().inner.borrow().amount
+    }
+
+    pub fn tr_type(&self) -> TransactionType {
+        match self.imp().inner.borrow().tr_type {
+            TransactionType::EXPENSE => TransactionType::EXPENSE,
+            TransactionType::INCOME => TransactionType::INCOME,
         }
     }
 
     pub fn date(&self) -> DateTime {
-        DateTime::from_iso8601(&self.date, None).unwrap()
+        DateTime::from_iso8601(&self.imp().inner.borrow().date, None).unwrap()
     }
 
-    pub fn set_name(&mut self, name: &str) {
-        self.name = name.to_string();
+    pub fn set_name(&self, name: &str) {
+        self.imp().inner.borrow_mut().name = name.to_string();
     }
 
-    pub fn change_tr_type(&mut self, tr_type: TransactionType) {
-        self.tr_type = tr_type;
+    pub fn change_tr_type(&self, tr_type: TransactionType) {
+        self.imp().inner.borrow_mut().tr_type = tr_type;
     }
 
-    pub fn set_amount(&mut self, amount: f32) {
-        self.amount = amount;
+    pub fn set_amount(&self, amount: f32) {
+        self.imp().inner.borrow_mut().amount = amount;
     }
 
-    pub fn set_date(&mut self, date: DateTime) {
-        self.date = String::from(date.format_iso8601().unwrap().as_str());
+    pub fn set_date(&self, date: DateTime) {
+        self.imp().inner.borrow_mut().date = String::from(date.format_iso8601().unwrap().as_str());
     }
 
     pub fn signed_amount(&self) -> f32 {
-        match self.tr_type {
-            TransactionType::EXPENSE => -self.amount,
-            TransactionType::INCOME => self.amount,
+        match self.imp().inner.borrow().tr_type {
+            TransactionType::EXPENSE => -self.imp().inner.borrow().amount,
+            TransactionType::INCOME => self.imp().inner.borrow().amount,
         }
     }
 
