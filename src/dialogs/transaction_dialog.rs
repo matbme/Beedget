@@ -5,7 +5,6 @@ use glib::{ParamFlags, ParamSpec, ParamSpecObject};
 
 use adw::subclass::prelude::*;
 
-use uuid::Uuid;
 use once_cell::sync::{Lazy, OnceCell};
 
 use crate::widgets::*;
@@ -165,16 +164,10 @@ impl TransactionDialog {
                     .downcast_ref::<GroupRow>().unwrap()
                     .property::<Group>("group");
 
-                let selected_group_id = Uuid::parse_str(
-                    &selected_group
-                        .property::<glib::GString>("uid").to_string()
-                );
+                let selected_group_id = selected_group.id();
 
-                let current_group_id = Uuid::parse_str(
-                    &self.imp().current_group
-                        .get().unwrap()
-                        .property::<glib::GString>("uid").to_string()
-                );
+                let current_group_id =
+                    self.imp().current_group.get().unwrap().id();
 
                 if selected_group_id != current_group_id {
                     // Edit transaction, change group
@@ -360,21 +353,12 @@ impl TransactionDialog {
 
         let mut group_idx: u32 = 0;
 
-        let current_group_row_id = Uuid::parse_str(
-            &self.imp().current_group
-                .get().unwrap()
-                .property::<glib::GString>("uid").to_string()
-        );
+        let current_group_row_id = self.imp().current_group.get().unwrap().id();
 
         for row in self.imp().group_select.model().unwrap().into_iter() {
-            let row_group_id = Uuid::parse_str(
-                &row
-                    .downcast_ref::<GroupRow>().unwrap()
-                    .imp()
-                    .group
-                    .borrow()
-                    .property::<glib::GString>("uid").to_string()
-            );
+            let row_group_id = row
+                .downcast_ref::<GroupRow>().unwrap()
+                .imp().group.borrow().id();
 
             if current_group_row_id == row_group_id {
                 break;

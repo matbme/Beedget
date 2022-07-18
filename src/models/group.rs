@@ -25,8 +25,6 @@ mod imp {
         pub name: String,
         pub emoji: String,
         pub color: Vec<f32>,
-        // TODO: Impl custom serialize/deserialize which calls
-        // function for inner type
         pub transactions: RefCell<Vec<Transaction>>,
     }
 
@@ -157,6 +155,10 @@ impl Group {
         self.imp().inner.borrow().save_to_file(path)?;
 
         Ok(())
+    }
+
+    pub fn id(&self) -> Uuid {
+        self.imp().inner.borrow().id
     }
 
     pub fn rgba_color(&self) -> RGBA {
