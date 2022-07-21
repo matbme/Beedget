@@ -83,12 +83,6 @@ impl BeedgetWindow {
     }
 
     #[template_callback]
-    fn open_create_transaction_dialog(&self) {
-        let dialog = TransactionDialog::new(self.upcast_ref());
-        dialog.present();
-    }
-
-    #[template_callback]
     fn filter_group_list(&self, entry: &gtk::SearchEntry) {
         self.imp().sidebar
             .model().unwrap()
@@ -100,23 +94,29 @@ impl BeedgetWindow {
             .set_search(Some(&entry.text()));
     }
 
-    fn setup_gactions(&self) {
-        let open_create_group_dialog_action = gio::SimpleAction::new("open-create-group-dialog", None);
-        open_create_group_dialog_action.connect_activate(clone!(@weak self as win => move |_, _| {
-            win.show_create_group_dialog();
-        }));
-        self.add_action(&open_create_group_dialog_action);
-
-        let open_create_transaction_dialog_action = gio::SimpleAction::new("open-create-transaction-dialog", None);
-        open_create_transaction_dialog_action.connect_activate(clone!(@weak self as win => move |_, _| {
-            win.open_create_transaction_dialog();
-        }));
-        self.add_action(&open_create_transaction_dialog_action);
+    #[template_callback]
+    fn open_transaction_dialog(&self) {
+        let dialog = TransactionDialog::new(self.upcast_ref());
+        dialog.present();
     }
 
-    fn show_create_group_dialog(&self) {
+    fn open_group_dialog(&self) {
         let dialog = GroupDialog::new(self.upcast_ref());
         dialog.present();
+    }
+
+    fn setup_gactions(&self) {
+        let open_group_dialog_action = gio::SimpleAction::new("open-group-dialog", None);
+        open_group_dialog_action.connect_activate(clone!(@weak self as win => move |_, _| {
+            win.open_group_dialog();
+        }));
+        self.add_action(&open_group_dialog_action);
+
+        let open_transaction_dialog_action = gio::SimpleAction::new("open-transaction-dialog", None);
+        open_transaction_dialog_action.connect_activate(clone!(@weak self as win => move |_, _| {
+            win.open_transaction_dialog();
+        }));
+        self.add_action(&open_transaction_dialog_action);
     }
 
     /// Window only receives application after construction, so we wait to
@@ -160,23 +160,8 @@ impl BeedgetWindow {
                 .downcast_ref::<GroupRow>().unwrap()
                 .imp().group.borrow();
 
-            // If we try to create a new GroupContent from the same group as
-            // the currently constructed view, the application freezes
-            if let Some(child) = self.imp().content.child() {
-                let child_id = child
-                    .downcast_ref::<GroupContent>().unwrap()
-                    .imp().group.get().unwrap().id();
-
-                let new_id = selected_group.id();
-
-                if child_id != new_id {
-                    let content_page = GroupContent::new(&selected_group);
-                    self.imp().content.set_child(Some(&content_page));
-                }
-            } else {
-                let content_page = GroupContent::new(&selected_group);
-                self.imp().content.set_child(Some(&content_page));
-            }
+            let content_page = GroupContent::new(&selected_group);
+            self.imp().content.set_child(Some(&content_page));
         }
     }
 }

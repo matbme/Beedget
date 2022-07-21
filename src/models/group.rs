@@ -6,7 +6,7 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::gdk::RGBA;
 use gtk::{gio, glib};
-use glib::{ParamFlags, ParamSpec, ParamSpecString};
+use glib::{ParamSpec, ParamSpecString};
 
 use once_cell::sync::Lazy;
 
@@ -49,34 +49,12 @@ mod imp {
     impl ObjectImpl for Group {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecString::new(
-                    "uid",
-                    "uid",
-                    "uid",
-                    None,
-                    ParamFlags::READWRITE
-                ),
-                ParamSpecString::new(
-                    "emoji",
-                    "emoji",
-                    "emoji",
-                    None,
-                    ParamFlags::READWRITE
-                ),
-                ParamSpecString::new(
-                    "color",
-                    "color",
-                    "color",
-                    None,
-                    ParamFlags::READWRITE
-                ),
-                ParamSpecString::new(
-                    "name",
-                    "name",
-                    "name",
-                    None,
-                    ParamFlags::READWRITE
-                )]
+                vec![
+                    ParamSpecString::builder("uid").build(),
+                    ParamSpecString::builder("emoji").build(),
+                    ParamSpecString::builder("color").build(),
+                    ParamSpecString::builder("name").build()
+                ]
             });
 
             PROPERTIES.as_ref()
@@ -84,12 +62,8 @@ mod imp {
 
         fn set_property(&self, _obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
             match pspec.name() {
-                "uid" => {
-                    self.inner.borrow_mut().id = Uuid::parse_str(value.get().unwrap()).unwrap();
-                }
-                "emoji" => {
-                    self.inner.borrow_mut().emoji = value.get().unwrap();
-                }
+                "uid" => self.inner.borrow_mut().id = Uuid::parse_str(value.get().unwrap()).unwrap(),
+                "emoji" => self.inner.borrow_mut().emoji = value.get().unwrap(),
                 "color" => {
                     let color = RGBA::parse(value.get().unwrap()).unwrap();
                     self.inner.borrow_mut().color = vec![
@@ -99,9 +73,7 @@ mod imp {
                         color.alpha()
                     ];
                 }
-                "name" => {
-                    self.inner.borrow_mut().name = value.get().unwrap();
-                }
+                "name" => self.inner.borrow_mut().name = value.get().unwrap(),
                 _ => unimplemented!()
             }
         }

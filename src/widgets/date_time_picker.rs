@@ -1,7 +1,7 @@
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{glib, CompositeTemplate};
-use glib::{ParamFlags, ParamSpec, ParamSpecString};
+use glib::{ParamSpec, ParamSpecString};
 
 use once_cell::sync::Lazy;
 use derivative::*;
@@ -60,13 +60,7 @@ mod imp {
     impl ObjectImpl for DateTimePicker {
         fn properties() -> &'static [glib::ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecString::new(
-                    "selected-date",
-                    "selected-date",
-                    "selected-date",
-                    None,
-                    ParamFlags::READWRITE
-                )]
+                vec![ParamSpecString::builder("selected-date").build()]
             });
 
             PROPERTIES.as_ref()
@@ -112,6 +106,7 @@ mod imp {
             obj.connect_minute_entry_changes();
         }
     }
+
     impl WidgetImpl for DateTimePicker {}
     impl WindowImpl for DateTimePicker {}
     impl BoxImpl for DateTimePicker {}

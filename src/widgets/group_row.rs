@@ -52,13 +52,11 @@ mod imp {
     impl ObjectImpl for GroupRow {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecObject::new(
-                    "group",
-                    "group",
-                    "group",
-                    Group::static_type(),
-                    ParamFlags::CONSTRUCT | ParamFlags::READWRITE
-                )]
+                vec![
+                    ParamSpecObject::builder("group", Group::static_type())
+                        .flags(ParamFlags::CONSTRUCT | ParamFlags::READWRITE)
+                        .build()
+                ]
             });
 
             PROPERTIES.as_ref()

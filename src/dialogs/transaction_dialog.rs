@@ -64,20 +64,14 @@ mod imp {
     impl ObjectImpl for TransactionDialog {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecObject::new(
-                    "transaction",
-                    "transaction",
-                    "transaction",
-                    Transaction::static_type(),
-                    ParamFlags::CONSTRUCT | ParamFlags::READWRITE
-                ),
-                ParamSpecObject::new(
-                    "group",
-                    "group",
-                    "group",
-                    Group::static_type(),
-                    ParamFlags::CONSTRUCT | ParamFlags::READWRITE
-                )]
+                vec![
+                    ParamSpecObject::builder("transaction" ,Transaction::static_type())
+                        .flags(ParamFlags::CONSTRUCT | ParamFlags::READWRITE)
+                        .build(),
+                    ParamSpecObject::builder("group", Group::static_type())
+                        .flags(ParamFlags::CONSTRUCT | ParamFlags::READWRITE)
+                        .build()
+                ]
             });
 
             PROPERTIES.as_ref()
@@ -158,17 +152,13 @@ impl TransactionDialog {
         if self.imp().edit_transaction.get().is_some() {
             app_data!(|data| {
                 let selected_group_idx = self.imp().group_select.selected();
-
                 let selected_group = &data.group_model.get().unwrap()
                     .item(selected_group_idx).unwrap()
                     .downcast_ref::<GroupRow>().unwrap()
                     .property::<Group>("group");
-
                 let selected_group_id = selected_group.id();
 
-                let current_group_id =
-                    self.imp().current_group.get().unwrap().id();
-
+                let current_group_id = self.imp().current_group.get().unwrap().id();
                 if selected_group_id != current_group_id {
                     // Edit transaction, change group
                     self.change_transaction_group();

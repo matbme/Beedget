@@ -47,13 +47,11 @@ mod imp {
     impl ObjectImpl for TransactionRow {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecObject::new(
-                    "transaction",
-                    "transaction",
-                    "transaction",
-                    Transaction::static_type(),
-                    ParamFlags::CONSTRUCT | ParamFlags::READWRITE
-                )]
+                vec![
+                    ParamSpecObject::builder("transaction", Transaction::static_type())
+                        .flags(ParamFlags::CONSTRUCT | ParamFlags::READWRITE)
+                        .build()
+                ]
             });
 
             PROPERTIES.as_ref()
