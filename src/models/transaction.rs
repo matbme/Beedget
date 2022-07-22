@@ -67,7 +67,7 @@ mod imp {
                 vec![
                     ParamSpecString::builder("uid").build(),
                     ParamSpecString::builder("name").build(),
-                    ParamSpecString::builder("ty-type").build(),
+                    ParamSpecString::builder("tr-type").build(),
                     ParamSpecFloat::builder("amount").build(),
                     ParamSpecString::builder("date").build(),
                 ]
@@ -82,7 +82,7 @@ mod imp {
                 "name" => self.inner.borrow_mut().name = value.get().unwrap(),
                 "tr-type" => self.inner.borrow_mut().tr_type = transaction_type_from_string(value.get().unwrap()),
                 "amount" => self.inner.borrow_mut().amount = value.get().unwrap(),
-                "date" => self.inner.borrow_mut().amount = value.get().unwrap(),
+                "date" => self.inner.borrow_mut().date = value.get().unwrap(),
                 _ => unimplemented!()
             }
         }
@@ -91,7 +91,7 @@ mod imp {
             match pspec.name() {
                 "uid" => self.inner.borrow().id.to_string().to_value(),
                 "name" => self.inner.borrow().name.to_value(),
-                "tr_type" => transaction_type_to_string(&self.inner.borrow().tr_type).to_value(),
+                "tr-type" => transaction_type_to_string(&self.inner.borrow().tr_type).to_value(),
                 "amount" => self.inner.borrow().amount.to_value(),
                 "date" => self.inner.borrow().date.to_value(),
                 _ => unimplemented!()
@@ -135,7 +135,7 @@ impl Transaction {
         glib::Object::new(&[
             ("uid", &Uuid::new_v4().to_string()),
             ("name", &name),
-            ("tr_type", &transaction_type_to_string(&tr_type)),
+            ("tr-type", &transaction_type_to_string(&tr_type)),
             ("amount", &amount),
             ("date", &date.format_iso8601().unwrap().as_str())
         ]).expect("Failed to create Transaction")
