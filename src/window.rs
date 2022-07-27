@@ -6,6 +6,7 @@ use gtk::{gio, glib, CompositeTemplate};
 use adw::prelude::BinExt;
 use adw::subclass::application_window::AdwApplicationWindowImpl;
 
+use crate::models::*;
 use crate::widgets::*;
 use crate::dialogs::*;
 
@@ -132,7 +133,7 @@ impl BeedgetWindow {
         app_data!(|data| {
             data.init_group_model();
 
-            let filter = gtk::StringFilter::new(Some(GroupRow::search_expression()));
+            let filter = gtk::StringFilter::new(Some(Group::search_expression()));
             let filter_model = gtk::FilterListModel::new(data.group_model.get(), Some(&filter));
             let selection_model = gtk::SingleSelection::new(Some(&filter_model));
 
@@ -143,7 +144,7 @@ impl BeedgetWindow {
             self.imp().sidebar.set_model(Some(&selection_model));
         });
 
-        self.imp().sidebar.set_factory(Some(&GroupRow::factory()));
+        self.imp().sidebar.set_factory(Some(&Group::factory()));
 
         // Fill content with element selected by default
         self.set_content_page(&self.imp().sidebar.model().unwrap()
@@ -157,8 +158,7 @@ impl BeedgetWindow {
             let selected_object = filtered_model
                 .item(model.selected()).unwrap();
             let selected_group = selected_object
-                .downcast_ref::<GroupRow>().unwrap()
-                .imp().group.borrow();
+                .downcast_ref::<Group>().unwrap();
 
             let content_page = GroupContent::new(&selected_group);
             self.imp().content.set_child(Some(&content_page));

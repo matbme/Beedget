@@ -1,6 +1,6 @@
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{gdk, glib, CompositeTemplate};
+use gtk::{gio::ListStore, gdk, glib, CompositeTemplate};
 use glib::{ParamFlags, ParamSpec, ParamSpecObject};
 
 use adw::subclass::prelude::*;
@@ -150,38 +150,28 @@ impl TransactionDialog {
     #[template_callback]
     fn confirm_transaction(&self) {
         if self.imp().edit_transaction.get().is_some() {
-            app_data!(|data| {
-                let selected_group_idx = self.imp().group_select.selected();
-                let selected_group = &data.group_model.get().unwrap()
-                    .item(selected_group_idx).unwrap()
-                    .downcast_ref::<GroupRow>().unwrap()
-                    .property::<Group>("group");
-                let selected_group_id = selected_group.id();
+            let selected_group_id = self.imp().group_select
+                .selected_item().unwrap()
+                .downcast_ref::<Group>().unwrap()
+                .id();
 
-                let current_group_id = self.imp().current_group.get().unwrap().id();
-                if selected_group_id != current_group_id {
-                    // Edit transaction, change group
-                    self.change_transaction_group();
-                } else {
-                    // Edit transaction, same group
-                    self.edit_transaction();
-                }
-            });
+            let current_group_id = self.imp().current_group.get().unwrap().id();
+            if selected_group_id != current_group_id {
+                // Edit transaction, change group
+                self.change_transaction_group();
+            } else {
+                // Edit transaction, same group
+                self.edit_transaction();
+            }
         } else {
             // Create transaction
             self.create_transaction();
         }
 
-        app_data!(|data| {
-            let selected_group_idx = self.imp().group_select.selected();
-
-            let selected_group = &data.group_model.get().unwrap()
-                .item(selected_group_idx).unwrap()
-                .downcast_ref::<GroupRow>().unwrap()
-                .property::<Group>("group");
-
-            data.save_group(selected_group);
-        });
+        let selected_group = self.imp().group_select
+            .selected_item().unwrap()
+            .downcast::<Group>().unwrap();
+        app_data!(|data| data.save_group(&selected_group));
 
         self.destroy();
     }
@@ -192,9 +182,7 @@ impl TransactionDialog {
         let prev_group = self.imp().current_group.get().unwrap();
         prev_group.delete_transaction(transaction.id());
 
-        app_data!(|data| {
-            data.save_group(prev_group);
-        });
+        app_data!(|data| data.save_group(prev_group));
 
         self.create_transaction();
     }
@@ -236,16 +224,11 @@ impl TransactionDialog {
             ).expect("Invalid date")
         );
 
-        app_data!(|data| {
-            let selected_group_idx = self.imp().group_select.selected();
+        let selected_group = self.imp().group_select
+            .selected_item().unwrap()
+            .downcast::<Group>().unwrap();
 
-            let selected_group = &data.group_model.get().unwrap()
-                .item(selected_group_idx).unwrap()
-                .downcast_ref::<GroupRow>().unwrap()
-                .property::<Group>("group");
-
-            selected_group.new_transaction(transaction);
-        });
+        selected_group.new_transaction(transaction);
     }
 
     /// Disables button if name and/or amount entries are empty
@@ -303,9 +286,9 @@ impl TransactionDialog {
     }
 
     fn populate_group_select_dropdown(&self) {
-        self.imp().group_select.set_factory(Some(&GroupRow::factory()));
+        self.imp().group_select.set_factory(Some(&Group::factory()));
         app_data!(|data| self.imp().group_select.set_model(data.group_model.get()));
-        self.imp().group_select.set_expression(Some(&GroupRow::search_expression()));
+        self.imp().group_select.set_expression(Some(&Group::search_expression()));
     }
 
     /// Fill entries with transaction values for edit
@@ -341,21 +324,11 @@ impl TransactionDialog {
             self.populate_group_select_dropdown();
         }
 
-        let mut group_idx: u32 = 0;
-
-        let current_group_row_id = self.imp().current_group.get().unwrap().id();
-
-        for row in self.imp().group_select.model().unwrap().into_iter() {
-            let row_group_id = row
-                .downcast_ref::<GroupRow>().unwrap()
-                .imp().group.borrow().id();
-
-            if current_group_row_id == row_group_id {
-                break;
-            } else {
-                group_idx += 1;
-            }
-        }
+        let group_idx = self.imp().group_select
+            .model().unwrap()
+            .downcast_ref::<ListStore>().unwrap()
+            .find(self.imp().current_group.get().unwrap())
+            .unwrap();
 
         self.imp().group_select.set_selected(group_idx);
     }

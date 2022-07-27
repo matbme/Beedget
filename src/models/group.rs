@@ -5,7 +5,7 @@ use anyhow::Result;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::gdk::RGBA;
-use gtk::{gio, glib};
+use gtk::{gio, glib, ClosureExpression, SignalListItemFactory};
 use glib::{ParamSpec, ParamSpecString};
 
 use once_cell::sync::Lazy;
@@ -114,6 +114,42 @@ impl Group {
         glib::Object::new(&[]).expect("Failed to create Group")
     }
 
+    pub fn factory() -> SignalListItemFactory {
+        let factory = SignalListItemFactory::new();
+
+        factory.connect_setup(move |_, list_item| {
+            let row = GroupRow::empty();
+
+            list_item.set_child(Some(&row));
+
+            list_item
+                .property_expression("item")
+                .chain_property::<Group>("name")
+                .bind(&row, "group-name", gtk::Widget::NONE);
+
+            list_item
+                .property_expression("item")
+                .chain_property::<Group>("emoji")
+                .bind(&row, "group-emoji", gtk::Widget::NONE);
+
+            list_item
+                .property_expression("item")
+                .chain_property::<Group>("color")
+                .bind(&row, "group-color", gtk::Widget::NONE);
+        });
+
+        factory
+    }
+
+    pub fn search_expression() -> ClosureExpression {
+        ClosureExpression::with_callback(gtk::Expression::NONE, |v| {
+            let group = v[0].get::<Group>()
+                .expect("Value is not a `Group`");
+
+            group.name()
+        })
+    }
+
     pub fn load_from_file(path: &Path) -> Result<Self> {
         let group: Self = glib::Object::new(&[])
             .expect("Failed to create group");
@@ -131,6 +167,18 @@ impl Group {
 
     pub fn id(&self) -> Uuid {
         self.imp().inner.borrow().id
+    }
+
+    pub fn name(&self) -> String {
+        self.imp().inner.borrow().name.to_string()
+    }
+
+    pub fn emoji(&self) -> String {
+        self.imp().inner.borrow().emoji.to_string()
+    }
+
+    pub fn color(&self) -> String {
+        self.rgba_color().to_str().to_string()
     }
 
     pub fn rgba_color(&self) -> RGBA {

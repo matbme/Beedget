@@ -27,7 +27,7 @@ impl SaveData {
                 Self {
                     groups: RefCell::new(groups),
                     save_path: pb.to_owned(),
-                    group_model: OnceCell::from(gio::ListStore::new(GroupRow::static_type()))
+                    group_model: OnceCell::from(gio::ListStore::new(Group::static_type()))
                 }
             }
             Err(_) => { panic!("Could not access save data directory"); }
@@ -60,8 +60,7 @@ impl SaveData {
     /// Initialize groups model based on data loaded from storage
     pub fn init_group_model(&self) {
         for group in self.groups.borrow().iter() {
-            let row = GroupRow::new(group);
-            self.group_model.get().unwrap().append(&row);
+            self.group_model.get().unwrap().append(group);
         }
     }
 

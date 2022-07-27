@@ -105,10 +105,11 @@ impl TransactionRow {
             let dialog = TransactionDialog::edit(
                 parent.root().unwrap().downcast_ref::<gtk::Window>().unwrap(),
                 parent.imp().transaction.get().unwrap(),
-                parent.parent().unwrap().
-                    parent().unwrap().
-                    downcast_ref::<GroupContent>().unwrap().
-                    imp().group.get().unwrap()
+                parent
+                    .parent().unwrap()
+                    .parent().unwrap()
+                    .downcast_ref::<GroupContent>().unwrap()
+                    .imp().group.get().unwrap()
             );
             dialog.present();
         }));
