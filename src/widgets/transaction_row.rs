@@ -47,13 +47,11 @@ mod imp {
     impl ObjectImpl for TransactionRow {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecObject::new(
-                    "transaction",
-                    "transaction",
-                    "transaction",
-                    Transaction::static_type(),
-                    ParamFlags::CONSTRUCT | ParamFlags::READWRITE
-                )]
+                vec![
+                    ParamSpecObject::builder("transaction", Transaction::static_type())
+                        .flags(ParamFlags::CONSTRUCT | ParamFlags::READWRITE)
+                        .build()
+                ]
             });
 
             PROPERTIES.as_ref()
@@ -107,10 +105,11 @@ impl TransactionRow {
             let dialog = TransactionDialog::edit(
                 parent.root().unwrap().downcast_ref::<gtk::Window>().unwrap(),
                 parent.imp().transaction.get().unwrap(),
-                parent.parent().unwrap().
-                    parent().unwrap().
-                    downcast_ref::<GroupContent>().unwrap().
-                    imp().group.get().unwrap()
+                parent
+                    .parent().unwrap()
+                    .parent().unwrap()
+                    .downcast_ref::<GroupContent>().unwrap()
+                    .imp().group.get().unwrap()
             );
             dialog.present();
         }));

@@ -6,8 +6,7 @@ use gtk::{gio, glib, CompositeTemplate};
 use adw::prelude::BinExt;
 use adw::subclass::application_window::AdwApplicationWindowImpl;
 
-use uuid::Uuid;
-
+use crate::models::*;
 use crate::widgets::*;
 use crate::dialogs::*;
 
@@ -85,12 +84,6 @@ impl BeedgetWindow {
     }
 
     #[template_callback]
-    fn open_create_transaction_dialog(&self) {
-        let dialog = TransactionDialog::new(self.upcast_ref());
-        dialog.present();
-    }
-
-    #[template_callback]
     fn filter_group_list(&self, entry: &gtk::SearchEntry) {
         self.imp().sidebar
             .model().unwrap()
@@ -102,23 +95,29 @@ impl BeedgetWindow {
             .set_search(Some(&entry.text()));
     }
 
-    fn setup_gactions(&self) {
-        let open_create_group_dialog_action = gio::SimpleAction::new("open-create-group-dialog", None);
-        open_create_group_dialog_action.connect_activate(clone!(@weak self as win => move |_, _| {
-            win.show_create_group_dialog();
-        }));
-        self.add_action(&open_create_group_dialog_action);
-
-        let open_create_transaction_dialog_action = gio::SimpleAction::new("open-create-transaction-dialog", None);
-        open_create_transaction_dialog_action.connect_activate(clone!(@weak self as win => move |_, _| {
-            win.open_create_transaction_dialog();
-        }));
-        self.add_action(&open_create_transaction_dialog_action);
+    #[template_callback]
+    fn open_transaction_dialog(&self) {
+        let dialog = TransactionDialog::new(self.upcast_ref());
+        dialog.present();
     }
 
-    fn show_create_group_dialog(&self) {
+    fn open_group_dialog(&self) {
         let dialog = GroupDialog::new(self.upcast_ref());
         dialog.present();
+    }
+
+    fn setup_gactions(&self) {
+        let open_group_dialog_action = gio::SimpleAction::new("open-group-dialog", None);
+        open_group_dialog_action.connect_activate(clone!(@weak self as win => move |_, _| {
+            win.open_group_dialog();
+        }));
+        self.add_action(&open_group_dialog_action);
+
+        let open_transaction_dialog_action = gio::SimpleAction::new("open-transaction-dialog", None);
+        open_transaction_dialog_action.connect_activate(clone!(@weak self as win => move |_, _| {
+            win.open_transaction_dialog();
+        }));
+        self.add_action(&open_transaction_dialog_action);
     }
 
     /// Window only receives application after construction, so we wait to
@@ -132,10 +131,10 @@ impl BeedgetWindow {
     /// Initialize sidebar with groups from application data
     fn init_sidebar(&self) {
         app_data!(|data| {
-            data.init_group_model();
+            let model = data.group_model();
 
-            let filter = gtk::StringFilter::new(Some(GroupRow::search_expression()));
-            let filter_model = gtk::FilterListModel::new(data.group_model.get(), Some(&filter));
+            let filter = gtk::StringFilter::new(Some(Group::search_expression()));
+            let filter_model = gtk::FilterListModel::new(Some(model), Some(&filter));
             let selection_model = gtk::SingleSelection::new(Some(&filter_model));
 
             selection_model.connect_selected_notify(clone!(@weak self as win => move |model| {
@@ -145,48 +144,24 @@ impl BeedgetWindow {
             self.imp().sidebar.set_model(Some(&selection_model));
         });
 
-        self.imp().sidebar.set_factory(Some(&GroupRow::factory()));
+        self.imp().sidebar.set_factory(Some(&Group::factory()));
 
         // Fill content with element selected by default
         self.set_content_page(&self.imp().sidebar.model().unwrap()
             .downcast_ref::<gtk::SingleSelection>().unwrap());
     }
 
-    /// Crates content page for selected group
+    /// Creates content page for selected group
     fn set_content_page(&self, model: &gtk::SingleSelection) {
         if model.selected() != gtk::INVALID_LIST_POSITION {
             let filtered_model = model.model().unwrap();
             let selected_object = filtered_model
                 .item(model.selected()).unwrap();
             let selected_group = selected_object
-                .downcast_ref::<GroupRow>().unwrap()
-                .imp().group.borrow();
+                .downcast_ref::<Group>().unwrap();
 
-            // If we try to create a new GroupContent from the same group as
-            // the currently constructed view, the application freezes
-            if let Some(child) = self.imp().content.child() {
-                let child_id = Uuid::parse_str(
-                    &child
-                        .downcast_ref::<GroupContent>().unwrap()
-                        .imp()
-                        .group
-                        .get().unwrap()
-                        .property::<glib::GString>("uid").to_string()
-                );
-
-                let new_id = Uuid::parse_str(
-                    &selected_group
-                        .property::<glib::GString>("uid").to_string()
-                );
-
-                if child_id != new_id {
-                    let content_page = GroupContent::new(&selected_group);
-                    self.imp().content.set_child(Some(&content_page));
-                }
-            } else {
-                let content_page = GroupContent::new(&selected_group);
-                self.imp().content.set_child(Some(&content_page));
-            }
+            let content_page = GroupContent::new(&selected_group);
+            self.imp().content.set_child(Some(&content_page));
         }
     }
 }

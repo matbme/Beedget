@@ -4,7 +4,7 @@ use uuid::Uuid;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::glib;
-use glib::{DateTime, ParamFlags, ParamSpec, ParamSpecString, ParamSpecFloat};
+use glib::{DateTime, ParamSpec, ParamSpecString, ParamSpecFloat};
 
 use once_cell::sync::Lazy;
 
@@ -24,6 +24,14 @@ pub fn transaction_type_to_string(tr_type: &TransactionType) -> String {
     match tr_type {
         TransactionType::EXPENSE => String::from("EXPENSE"),
         TransactionType::INCOME => String::from("INCOME"),
+    }
+}
+
+pub fn transaction_type_from_string(tr_str: &str) -> TransactionType {
+    match tr_str {
+        "EXPENSE" => TransactionType::EXPENSE,
+        "INCOME" => TransactionType::INCOME,
+        _ => unimplemented!()
     }
 }
 
@@ -56,43 +64,13 @@ mod imp {
     impl ObjectImpl for Transaction {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecString::new(
-                    "uid",
-                    "uid",
-                    "uid",
-                    None,
-                    ParamFlags::READWRITE
-                ),
-                ParamSpecString::new(
-                    "name",
-                    "name",
-                    "name",
-                    None,
-                    ParamFlags::READWRITE
-                ),
-                ParamSpecString::new(
-                    "ty-type",
-                    "ty-type",
-                    "ty-type",
-                    None,
-                    ParamFlags::READWRITE
-                ),
-                ParamSpecFloat::new(
-                    "amount",
-                    "amount",
-                    "amount",
-                    std::f32::MIN,
-                    std::f32::MAX,
-                    0.0,
-                    ParamFlags::READWRITE
-                 ),
-                ParamSpecString::new(
-                    "date",
-                    "date",
-                    "date",
-                    None,
-                    ParamFlags::READWRITE
-                )]
+                vec![
+                    ParamSpecString::builder("uid").build(),
+                    ParamSpecString::builder("name").build(),
+                    ParamSpecString::builder("tr-type").build(),
+                    ParamSpecFloat::builder("amount").build(),
+                    ParamSpecString::builder("date").build(),
+                ]
             });
 
             PROPERTIES.as_ref()
@@ -102,16 +80,9 @@ mod imp {
             match pspec.name() {
                 "uid" => self.inner.borrow_mut().id = Uuid::parse_str(value.get().unwrap()).unwrap(),
                 "name" => self.inner.borrow_mut().name = value.get().unwrap(),
-                "tr-type" => {
-                    let tr_type = value.get().unwrap();
-                    match tr_type {
-                        "EXPENSE" => self.inner.borrow_mut().tr_type = TransactionType::EXPENSE,
-                        "INCOME" => self.inner.borrow_mut().tr_type = TransactionType::INCOME,
-                        _ => unimplemented!()
-                    }
-                }
+                "tr-type" => self.inner.borrow_mut().tr_type = transaction_type_from_string(value.get().unwrap()),
                 "amount" => self.inner.borrow_mut().amount = value.get().unwrap(),
-                "date" => self.inner.borrow_mut().amount = value.get().unwrap(),
+                "date" => self.inner.borrow_mut().date = value.get().unwrap(),
                 _ => unimplemented!()
             }
         }
@@ -120,7 +91,7 @@ mod imp {
             match pspec.name() {
                 "uid" => self.inner.borrow().id.to_string().to_value(),
                 "name" => self.inner.borrow().name.to_value(),
-                "tr_type" => transaction_type_to_string(&self.inner.borrow().tr_type).to_value(),
+                "tr-type" => transaction_type_to_string(&self.inner.borrow().tr_type).to_value(),
                 "amount" => self.inner.borrow().amount.to_value(),
                 "date" => self.inner.borrow().date.to_value(),
                 _ => unimplemented!()
@@ -164,7 +135,7 @@ impl Transaction {
         glib::Object::new(&[
             ("uid", &Uuid::new_v4().to_string()),
             ("name", &name),
-            ("tr_type", &transaction_type_to_string(&tr_type)),
+            ("tr-type", &transaction_type_to_string(&tr_type)),
             ("amount", &amount),
             ("date", &date.format_iso8601().unwrap().as_str())
         ]).expect("Failed to create Transaction")

@@ -38,13 +38,11 @@ mod imp {
     impl ObjectImpl for GroupContent {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecObject::new(
-                    "group",
-                    "group",
-                    "group",
-                    Group::static_type(),
-                    ParamFlags::CONSTRUCT | ParamFlags::WRITABLE
-                )]
+                vec![
+                    ParamSpecObject::builder("group", Group::static_type())
+                        .flags(ParamFlags::CONSTRUCT | ParamFlags::WRITABLE)
+                        .build()
+                ]
             });
 
             PROPERTIES.as_ref()

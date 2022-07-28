@@ -1,13 +1,12 @@
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{glib, CompositeTemplate, SignalListItemFactory};
-use glib::{ParamFlags, ParamSpec, ParamSpecObject};
+use gtk::{gdk::RGBA, glib, CompositeTemplate};
+use glib::{ParamSpec, ParamSpecString};
 
 use gtk::cairo::{LineJoin, LinearGradient};
 
 use once_cell::sync::Lazy;
 
-use std::cell::RefCell;
 use std::f64::consts::PI;
 
 use crate::force;
@@ -30,8 +29,6 @@ mod imp {
 
         #[template_child]
         pub name: TemplateChild<gtk::Label>,
-
-        pub group: RefCell<Group>,
     }
 
     #[glib::object_subclass]
@@ -52,13 +49,11 @@ mod imp {
     impl ObjectImpl for GroupRow {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecObject::new(
-                    "group",
-                    "group",
-                    "group",
-                    Group::static_type(),
-                    ParamFlags::CONSTRUCT | ParamFlags::READWRITE
-                )]
+                vec![
+                    ParamSpecString::builder("group-name").build(),
+                    ParamSpecString::builder("group-color").build(),
+                    ParamSpecString::builder("group-emoji").build()
+                ]
             });
 
             PROPERTIES.as_ref()
@@ -66,29 +61,27 @@ mod imp {
 
         fn set_property(&self, obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
             match pspec.name() {
-                "group" => {
-                    if let Ok(input) = value.get::<Group>() {
-                        self.group.replace(input);
-                        obj.set_icon_emoji();
-                        obj.set_draw_func();
-                        obj.set_label();
+                "group-name" => {
+                    if let Ok(input) = value.get() {
+                        obj.set_label(input);
+                    }
+                }
+                "group-color" => {
+                    if let Ok(input) = value.get() {
+                        obj.set_draw_func(RGBA::parse(input).unwrap());
+                    }
+                }
+                "group-emoji" => {
+                    if let Ok(input) = value.get() {
+                        obj.set_icon_emoji(input);
                     }
                 }
                 _ => unimplemented!()
             }
         }
 
-        fn property(&self, _obj: &Self::Type, _id: usize, pspec: &ParamSpec) -> glib::Value {
-            match pspec.name() {
-                "group" => self.group.borrow().to_value(),
-                _ => unimplemented!()
-            }
-        }
-
         fn constructed(&self, obj: &Self::Type) {
             self.parent_constructed(obj);
-
-            obj.connect_property_changes();
         }
     }
 
@@ -105,7 +98,9 @@ glib::wrapper! {
 impl GroupRow {
     pub fn new(group: &Group) -> Self {
         glib::Object::new(&[
-            ("group", &group)
+            ("group-name", &group.name()),
+            ("group-color", &group.color()),
+            ("group-emoji", &group.emoji())
         ]).expect("Failed to create `GroupRow`.")
     }
 
@@ -114,42 +109,7 @@ impl GroupRow {
             .expect("Failed to create `GroupRow`.")
     }
 
-    pub fn factory() -> SignalListItemFactory {
-        let group_factory = gtk::SignalListItemFactory::new();
-
-        group_factory.connect_setup(move |_, list_item| {
-            let row = GroupRow::empty();
-
-            list_item.set_child(Some(&row));
-
-            list_item
-                .property_expression("item")
-                .chain_property::<GroupRow>("group")
-                .bind(&row, "group", gtk::Widget::NONE);
-        });
-
-        group_factory
-    }
-
-    pub fn search_expression() -> gtk::ClosureExpression {
-        gtk::ClosureExpression::with_callback(gtk::Expression::NONE, |v| {
-            let row = v[0].get::<GroupRow>()
-                .expect("Value is not a `GroupRow`");
-
-            let group = row.imp().group.borrow();
-            group.property::<glib::GString>("name").to_string()
-        })
-    }
-
-    fn connect_property_changes(&self) {
-        self.connect_notify_local(Some("group"), move |instance, _| {
-            instance.set_icon_emoji();
-            instance.set_draw_func();
-            instance.set_label();
-        });
-    }
-
-    fn set_draw_func(&self) {
+    fn set_draw_func(&self, color: RGBA) {
         self.imp().icon.set_draw_func(glib::clone!(@weak self as parent => move |_, ctx, w, h| {
             let allocation = parent.imp().icon.parent().unwrap().allocation();
 
@@ -161,7 +121,6 @@ impl GroupRow {
             ctx.set_tolerance(0.1);
             ctx.set_line_join(LineJoin::Bevel);
 
-            let color = parent.imp().group.borrow().rgba_color();
             ctx.set_source_rgb(color.red() as f64, color.green() as f64, color.blue() as f64);
 
             let gradient = LinearGradient::new(allocation_x,
@@ -206,18 +165,11 @@ impl GroupRow {
         self.imp().icon.queue_draw();
     }
 
-    fn set_label(&self) {
-        let label = self.imp().group
-            .borrow()
-            .property::<glib::GString>("name")
-            .to_string();
-
+    fn set_label(&self, label: &str) {
         self.imp().name.set_label(&label);
     }
 
-    fn set_icon_emoji(&self) {
-        let icon = self.imp().group.borrow().property::<glib::GString>("emoji").to_string();
-
+    fn set_icon_emoji(&self, icon: &str) {
         self.imp().icon_emoji.set_label(&icon);
         self.imp().overlay.add_overlay(self.imp().icon_emoji.upcast_ref::<gtk::Label>());
     }

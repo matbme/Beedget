@@ -5,8 +5,8 @@ use anyhow::Result;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::gdk::RGBA;
-use gtk::{gio, glib};
-use glib::{ParamFlags, ParamSpec, ParamSpecString};
+use gtk::{gio, glib, ClosureExpression, SignalListItemFactory};
+use glib::{ParamSpec, ParamSpecString};
 
 use once_cell::sync::Lazy;
 
@@ -25,8 +25,6 @@ mod imp {
         pub name: String,
         pub emoji: String,
         pub color: Vec<f32>,
-        // TODO: Impl custom serialize/deserialize which calls
-        // function for inner type
         pub transactions: RefCell<Vec<Transaction>>,
     }
 
@@ -51,34 +49,12 @@ mod imp {
     impl ObjectImpl for Group {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecString::new(
-                    "uid",
-                    "uid",
-                    "uid",
-                    None,
-                    ParamFlags::READWRITE
-                ),
-                ParamSpecString::new(
-                    "emoji",
-                    "emoji",
-                    "emoji",
-                    None,
-                    ParamFlags::READWRITE
-                ),
-                ParamSpecString::new(
-                    "color",
-                    "color",
-                    "color",
-                    None,
-                    ParamFlags::READWRITE
-                ),
-                ParamSpecString::new(
-                    "name",
-                    "name",
-                    "name",
-                    None,
-                    ParamFlags::READWRITE
-                )]
+                vec![
+                    ParamSpecString::builder("uid").build(),
+                    ParamSpecString::builder("emoji").build(),
+                    ParamSpecString::builder("color").build(),
+                    ParamSpecString::builder("name").build()
+                ]
             });
 
             PROPERTIES.as_ref()
@@ -86,12 +62,8 @@ mod imp {
 
         fn set_property(&self, _obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
             match pspec.name() {
-                "uid" => {
-                    self.inner.borrow_mut().id = Uuid::parse_str(value.get().unwrap()).unwrap();
-                }
-                "emoji" => {
-                    self.inner.borrow_mut().emoji = value.get().unwrap();
-                }
+                "uid" => self.inner.borrow_mut().id = Uuid::parse_str(value.get().unwrap()).unwrap(),
+                "emoji" => self.inner.borrow_mut().emoji = value.get().unwrap(),
                 "color" => {
                     let color = RGBA::parse(value.get().unwrap()).unwrap();
                     self.inner.borrow_mut().color = vec![
@@ -101,9 +73,7 @@ mod imp {
                         color.alpha()
                     ];
                 }
-                "name" => {
-                    self.inner.borrow_mut().name = value.get().unwrap();
-                }
+                "name" => self.inner.borrow_mut().name = value.get().unwrap(),
                 _ => unimplemented!()
             }
         }
@@ -144,6 +114,42 @@ impl Group {
         glib::Object::new(&[]).expect("Failed to create Group")
     }
 
+    pub fn factory() -> SignalListItemFactory {
+        let factory = SignalListItemFactory::new();
+
+        factory.connect_setup(move |_, list_item| {
+            let row = GroupRow::empty();
+
+            list_item.set_child(Some(&row));
+
+            list_item
+                .property_expression("item")
+                .chain_property::<Group>("name")
+                .bind(&row, "group-name", gtk::Widget::NONE);
+
+            list_item
+                .property_expression("item")
+                .chain_property::<Group>("emoji")
+                .bind(&row, "group-emoji", gtk::Widget::NONE);
+
+            list_item
+                .property_expression("item")
+                .chain_property::<Group>("color")
+                .bind(&row, "group-color", gtk::Widget::NONE);
+        });
+
+        factory
+    }
+
+    pub fn search_expression() -> ClosureExpression {
+        ClosureExpression::with_callback(gtk::Expression::NONE, |v| {
+            let group = v[0].get::<Group>()
+                .expect("Value is not a `Group`");
+
+            group.name()
+        })
+    }
+
     pub fn load_from_file(path: &Path) -> Result<Self> {
         let group: Self = glib::Object::new(&[])
             .expect("Failed to create group");
@@ -157,6 +163,22 @@ impl Group {
         self.imp().inner.borrow().save_to_file(path)?;
 
         Ok(())
+    }
+
+    pub fn id(&self) -> Uuid {
+        self.imp().inner.borrow().id
+    }
+
+    pub fn name(&self) -> String {
+        self.imp().inner.borrow().name.to_string()
+    }
+
+    pub fn emoji(&self) -> String {
+        self.imp().inner.borrow().emoji.to_string()
+    }
+
+    pub fn color(&self) -> String {
+        self.rgba_color().to_str().to_string()
     }
 
     pub fn rgba_color(&self) -> RGBA {
