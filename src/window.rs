@@ -131,10 +131,10 @@ impl BeedgetWindow {
     /// Initialize sidebar with groups from application data
     fn init_sidebar(&self) {
         app_data!(|data| {
-            data.init_group_model();
+            let model = data.group_model();
 
             let filter = gtk::StringFilter::new(Some(Group::search_expression()));
-            let filter_model = gtk::FilterListModel::new(data.group_model.get(), Some(&filter));
+            let filter_model = gtk::FilterListModel::new(Some(model), Some(&filter));
             let selection_model = gtk::SingleSelection::new(Some(&filter_model));
 
             selection_model.connect_selected_notify(clone!(@weak self as win => move |model| {
