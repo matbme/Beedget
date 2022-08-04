@@ -65,7 +65,7 @@ mod imp {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
                 vec![
-                    ParamSpecObject::builder("transaction" ,Transaction::static_type())
+                    ParamSpecObject::builder("transaction", Transaction::static_type())
                         .flags(ParamFlags::CONSTRUCT | ParamFlags::READWRITE)
                         .build(),
                     ParamSpecObject::builder("group", Group::static_type())
@@ -114,6 +114,7 @@ mod imp {
             }
         }
     }
+
     impl WidgetImpl for TransactionDialog {}
     impl WindowImpl for TransactionDialog {}
     impl AdwWindowImpl for TransactionDialog {}
