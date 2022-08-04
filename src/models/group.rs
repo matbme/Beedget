@@ -136,6 +136,10 @@ impl Group {
                 .property_expression("item")
                 .chain_property::<Group>("color")
                 .bind(&row, "group-color", gtk::Widget::NONE);
+
+            list_item
+                .property_expression("item")
+                .bind(&row, "group", gtk::Widget::NONE);
         });
 
         factory
@@ -165,6 +169,12 @@ impl Group {
         Ok(())
     }
 
+    pub fn delete_file(&self, base_path: &Path) -> Result<()> {
+        self.imp().inner.borrow().delete_file(base_path)?;
+
+        Ok(())
+    }
+
     pub fn id(&self) -> Uuid {
         self.imp().inner.borrow().id
     }
@@ -179,6 +189,23 @@ impl Group {
 
     pub fn color(&self) -> String {
         self.rgba_color().to_str().to_string()
+    }
+
+    pub fn set_name(&self, name: &str) {
+        self.imp().inner.borrow_mut().name = name.to_string();
+    }
+
+    pub fn set_color(&self, color: &RGBA) {
+        self.imp().inner.borrow_mut().color = vec![
+            color.red(),
+            color.green(),
+            color.blue(),
+            color.alpha()
+        ];
+    }
+
+    pub fn set_emoji(&self, emoji: &str) {
+        self.imp().inner.borrow_mut().emoji = emoji.to_string();
     }
 
     pub fn rgba_color(&self) -> RGBA {

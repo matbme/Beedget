@@ -89,4 +89,10 @@ impl SaveData {
         group.save_to_file(self.save_path.as_path().join(r"groups").as_path())
             .expect("Could not save group into file");
     }
+
+    /// Delete group and all transactions
+    pub fn delete_group(&self, group: &Group) {
+        group.delete_file(self.save_path.as_path().join(r"groups").as_path())
+            .expect("Could not delete group file");
+    }
 }

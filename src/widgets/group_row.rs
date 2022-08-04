@@ -1,16 +1,20 @@
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{gdk::RGBA, glib, CompositeTemplate};
-use glib::{ParamSpec, ParamSpecString};
+use gtk::{gdk, gio, glib, CompositeTemplate};
+use gdk::RGBA;
+use glib::{ParamSpec, ParamSpecString, ParamSpecObject};
 
 use gtk::cairo::{LineJoin, LinearGradient};
 
-use once_cell::sync::Lazy;
+use once_cell::sync::{Lazy, OnceCell};
 
 use std::f64::consts::PI;
 
 use crate::force;
+use crate::dialogs::*;
 use crate::models::*;
+
+use beedget::app_data;
 
 mod imp {
     use super::*;
@@ -29,6 +33,11 @@ mod imp {
 
         #[template_child]
         pub name: TemplateChild<gtk::Label>,
+
+        #[template_child]
+        pub options_menu: TemplateChild<gtk::PopoverMenu>,
+
+        pub group: OnceCell<Group>
     }
 
     #[glib::object_subclass]
@@ -52,7 +61,8 @@ mod imp {
                 vec![
                     ParamSpecString::builder("group-name").build(),
                     ParamSpecString::builder("group-color").build(),
-                    ParamSpecString::builder("group-emoji").build()
+                    ParamSpecString::builder("group-emoji").build(),
+                    ParamSpecObject::builder("group", Group::static_type()).build()
                 ]
             });
 
@@ -76,12 +86,30 @@ mod imp {
                         obj.set_icon_emoji(input);
                     }
                 }
+                "group" => {
+                    if let Ok(input) = value.get() {
+                        self.group.set(input)
+                            .expect("Failed to set group row's associated group");
+                    }
+                }
                 _ => unimplemented!()
             }
         }
 
         fn constructed(&self, obj: &Self::Type) {
             self.parent_constructed(obj);
+
+            let click_event_controller = gtk::GestureClick::builder()
+                .button(3) // Right mouse button
+                .build();
+
+            click_event_controller.connect_pressed(glib::clone!(@weak obj as parent => move |_, _, _, _| {
+                parent.imp().options_menu.popup();
+            }));
+
+            obj.add_controller(&click_event_controller);
+
+            obj.setup_gactions();
         }
     }
 
@@ -107,6 +135,28 @@ impl GroupRow {
     pub fn empty() -> Self {
         glib::Object::new(&[])
             .expect("Failed to create `GroupRow`.")
+    }
+
+    fn setup_gactions(&self) {
+        let group_action_group = gio::SimpleActionGroup::new();
+
+        let edit_action = gio::SimpleAction::new("edit", None);
+        edit_action.connect_activate(glib::clone!(@weak self as parent => move |_, _| {
+            let dialog = GroupDialog::edit(
+                parent.root().unwrap().downcast_ref::<gtk::Window>().unwrap(),
+                parent.imp().group.get().unwrap()
+            );
+            dialog.present();
+        }));
+        group_action_group.add_action(&edit_action);
+
+        let delete_action = gio::SimpleAction::new("delete", None);
+        delete_action.connect_activate(glib::clone!(@weak self as parent => move |_, _| {
+            parent.delete_group();
+        }));
+        group_action_group.add_action(&delete_action);
+
+        self.insert_action_group("group", Some(&group_action_group));
     }
 
     fn set_draw_func(&self, color: RGBA) {
@@ -172,5 +222,9 @@ impl GroupRow {
     fn set_icon_emoji(&self, icon: &str) {
         self.imp().icon_emoji.set_label(&icon);
         self.imp().overlay.add_overlay(self.imp().icon_emoji.upcast_ref::<gtk::Label>());
+    }
+
+    fn delete_group(&self) {
+        app_data!(|data| data.delete_group(self.imp().group.get().unwrap()));
     }
 }

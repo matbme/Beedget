@@ -3,7 +3,10 @@ use std::cell::RefCell;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gdk, glib, CompositeTemplate};
+use glib::{ParamFlags, ParamSpec, ParamSpecObject};
 use gtk::gdk::RGBA;
+
+use once_cell::sync::{Lazy, OnceCell};
 
 use adw::subclass::window::AdwWindowImpl;
 
@@ -34,7 +37,8 @@ mod imp {
         #[template_child]
         pub group_icon_picker_button: TemplateChild<gtk::Button>,
 
-        pub current_emoji : RefCell<String>
+        pub current_emoji: RefCell<String>,
+        pub edit_group: OnceCell<Group>
     }
 
     #[glib::object_subclass]
@@ -54,21 +58,50 @@ mod imp {
     }
 
     impl ObjectImpl for GroupDialog {
+        fn properties() -> &'static [ParamSpec] {
+            static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
+                vec![
+                    ParamSpecObject::builder("group", Group::static_type())
+                        .flags(ParamFlags::CONSTRUCT | ParamFlags::READWRITE)
+                        .build()
+                ]
+            });
+
+            PROPERTIES.as_ref()
+        }
+
+        fn set_property(&self, obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
+            match pspec.name() {
+                "group" => {
+                    if let Ok(input) = value.get::<Group>() {
+                        match self.edit_group.set(input) {
+                            Ok(_) => obj.populate_group_values(),
+                            Err(_) => panic!("Group pointer was already set!")
+                        }
+                    }
+                }
+                _ => unimplemented!()
+            }
+        }
+
         fn constructed(&self, obj: &Self::Type) {
             self.parent_constructed(obj);
 
-            // Random color
-            let mut rng = rand::thread_rng();
-            self.group_color.set_rgba(&RGBA::new(rng.gen(), rng.gen(), rng.gen(), 1.0));
+            if obj.imp().edit_group.get().is_none() {
+                // Random color
+                let mut rng = rand::thread_rng();
+                self.group_color.set_rgba(&RGBA::new(rng.gen(), rng.gen(), rng.gen(), 1.0));
 
-            // Random emoji
-            let random_emoji = emojis::iter().choose(&mut rng).unwrap();
-            self.group_icon_picker_button.set_label(random_emoji.as_str());
+                // Random emoji
+                let random_emoji = emojis::iter().choose(&mut rng).unwrap();
+                self.group_icon_picker_button.set_label(random_emoji.as_str());
+            }
 
             obj.connect_key_event_controller();
             obj.connect_add_button_to_entry_size();
         }
     }
+
     impl WidgetImpl for GroupDialog {}
     impl WindowImpl for GroupDialog {}
     impl AdwWindowImpl for GroupDialog {}
@@ -89,12 +122,27 @@ impl GroupDialog {
         ]).expect("Failed to create `GroupDialog`.")
     }
 
+    pub fn edit(parent: &gtk::Window, edit_group: &Group) -> Self {
+        glib::Object::new(&[
+            ("transient-for", &Some(parent)),
+            ("group", &edit_group)
+        ]).expect("Failed to create `GroupDialog`")
+    }
+
     #[template_callback]
     fn close_window(&self) {
         self.destroy();
     }
 
     #[template_callback]
+    fn confirm_group(&self) {
+        if self.imp().edit_group.get().is_some() {
+            self.modify_group();
+        } else {
+            self.create_group();
+        }
+    }
+
     fn create_group(&self) {
         app_data!(|data| {
             let group = Group::new(
@@ -108,6 +156,18 @@ impl GroupDialog {
                 Err(error) => { panic!("{}", error); }
             }
         });
+    }
+
+    fn modify_group(&self) {
+        let group = self.imp().edit_group.get().unwrap();
+
+        group.set_name(&self.imp().group_name.text());
+        group.set_color(&self.imp().group_color.rgba());
+        group.set_emoji(&self.imp().group_icon_picker_button.label().expect("No group emoji selected"));
+
+        app_data!(|data| data.save_group(group));
+
+        self.destroy();
     }
 
     #[template_callback]
@@ -158,5 +218,17 @@ impl GroupDialog {
         }));
 
         self.add_controller(&key_controller);
+    }
+
+    /// Fill entries with group values for edit
+    fn populate_group_values(&self) {
+        let group = self.imp().edit_group.get().expect("Group is not initialized");
+
+        self.imp().group_name.set_buffer(&gtk::EntryBuffer::new(
+            Some(&group.name())
+        ));
+
+        self.imp().group_color.set_rgba(&group.rgba_color());
+        self.imp().group_icon_picker_button.set_label(&group.emoji());
     }
 }

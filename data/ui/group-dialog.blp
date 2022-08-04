@@ -27,7 +27,7 @@ template GroupDialog : Adw.Window {
       Button add_button {
         styles ["suggested-action"]
         label: _("Create");
-        clicked => create_group() swapped;
+        clicked => confirm_group() swapped;
       }
     }
 

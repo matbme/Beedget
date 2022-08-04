@@ -19,8 +19,26 @@ template GroupRow : Box {
   Label name {
     justify: center;
   }
+
+  PopoverMenu options_menu {
+      menu-model: group_options_menu;
+      position: right;
+  }
 }
 
 Label icon_emoji {
   justify: center;
+}
+
+menu group_options_menu {
+  section {
+    item {
+      label: _("Edit");
+      action: "group.edit";
+    }
+    item {
+      label: _("Delete");
+      action: "group.delete";
+    }
+  }
 }

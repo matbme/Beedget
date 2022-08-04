@@ -1,5 +1,5 @@
 use std::path::Path;
-use std::fs::File;
+use std::fs::{File, remove_file};
 use std::io::prelude::*;
 
 use anyhow::Result;
@@ -28,6 +28,12 @@ pub trait DataObject {
         let serialized = serde_json::to_string(self)?;
         let mut file = File::create(filename)?;
         file.write_all(serialized.as_bytes())?;
+
+        Ok(())
+    }
+
+    fn delete_file(&self, base_path: &Path) -> Result<()> {
+        remove_file(base_path.join(self.filename()))?;
 
         Ok(())
     }
