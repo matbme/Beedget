@@ -6,8 +6,9 @@ use glib::{ParamSpec, ParamSpecString, ParamSpecObject};
 
 use gtk::cairo::{LineJoin, LinearGradient};
 
-use once_cell::sync::{Lazy, OnceCell};
+use once_cell::sync::Lazy;
 
+use std::cell::RefCell;
 use std::f64::consts::PI;
 
 use crate::force;
@@ -37,7 +38,7 @@ mod imp {
         #[template_child]
         pub options_menu: TemplateChild<gtk::PopoverMenu>,
 
-        pub group: OnceCell<Group>
+        pub group: RefCell<Group>
     }
 
     #[glib::object_subclass]
@@ -88,8 +89,7 @@ mod imp {
                 }
                 "group" => {
                     if let Ok(input) = value.get() {
-                        self.group.set(input)
-                            .expect("Failed to set group row's associated group");
+                        self.group.replace(input);
                     }
                 }
                 _ => unimplemented!()
@@ -144,7 +144,7 @@ impl GroupRow {
         edit_action.connect_activate(glib::clone!(@weak self as parent => move |_, _| {
             let dialog = GroupDialog::edit(
                 parent.root().unwrap().downcast_ref::<gtk::Window>().unwrap(),
-                parent.imp().group.get().unwrap()
+                &parent.imp().group.borrow()
             );
             dialog.present();
         }));
@@ -225,6 +225,6 @@ impl GroupRow {
     }
 
     fn delete_group(&self) {
-        app_data!(|data| data.delete_group(self.imp().group.get().unwrap()));
+        app_data!(|data| data.delete_group(&self.imp().group.borrow()));
     }
 }
