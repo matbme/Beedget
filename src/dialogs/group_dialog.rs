@@ -95,6 +95,7 @@ mod imp {
                 // Random emoji
                 let random_emoji = emojis::iter().choose(&mut rng).unwrap();
                 self.group_icon_picker_button.set_label(random_emoji.as_str());
+                *obj.imp().current_emoji.borrow_mut() = random_emoji.to_string();
             }
 
             obj.connect_key_event_controller();
@@ -161,9 +162,15 @@ impl GroupDialog {
     fn modify_group(&self) {
         let group = self.imp().edit_group.get().unwrap();
 
-        group.set_name(&self.imp().group_name.text());
-        group.set_color(&self.imp().group_color.rgba());
-        group.set_emoji(&self.imp().group_icon_picker_button.label().expect("No group emoji selected"));
+        let name = self.imp().group_name.text();
+        group.set_property("name", name.to_value());
+
+        let color_str = self.imp().group_color.rgba().to_str();
+        group.set_property("color", color_str.to_value());
+
+        let emoji = self.imp().group_icon_picker_button.label()
+            .expect("No group emoji selected");
+        group.set_property("emoji", emoji.to_value());
 
         app_data!(|data| data.save_group(group));
 

@@ -10,7 +10,6 @@ use gtk::prelude::*;
 use gtk::gio;
 
 use crate::models::Group;
-use crate::widgets::*;
 
 #[derive(Default, Debug)]
 pub struct SaveData {

@@ -14,8 +14,6 @@ use crate::dialogs::*;
 use crate::models::*;
 use crate::widgets::*;
 
-use beedget::app_data;
-
 mod imp {
     use super::*;
 
