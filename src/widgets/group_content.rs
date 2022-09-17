@@ -85,14 +85,15 @@ impl GroupContent {
     }
 
     fn init_transaction_history(&self) {
-        let model = self.imp().group.get().unwrap().transaction_model();
+        let group = self.imp().group.get()
+            .expect("Group property is not set");
 
         self.imp().transaction_history.bind_model(
-            Some(&model),
-            glib::clone!(@weak self as parent => @default-panic, move |item| {
+            Some(group.transaction_model()),
+            move |item| {
                 let row = item.downcast_ref::<TransactionRow>().unwrap().clone();
                 row.upcast::<gtk::Widget>()
-            })
+            }
         );
     }
 }

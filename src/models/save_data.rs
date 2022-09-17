@@ -74,12 +74,11 @@ impl SaveData {
     pub fn new_group(&self, group: Group) -> Result<()> {
         self.groups.borrow_mut().push(group);
 
-        let stored_group = self.groups.borrow();
-        stored_group.last().unwrap()
+        let stored_groups = self.groups.borrow();
+        stored_groups.last().unwrap()
             .save_to_file(self.save_path.as_path().join(r"groups").as_path())?;
 
-        let row = GroupRow::new(stored_group.last().unwrap());
-        self.group_model.get().unwrap().append(&row);
+        self.group_model().append(stored_groups.last().unwrap());
 
         Ok(())
     }
@@ -94,5 +93,19 @@ impl SaveData {
     pub fn delete_group(&self, group: &Group) {
         group.delete_file(self.save_path.as_path().join(r"groups").as_path())
             .expect("Could not delete group file");
+
+        let list_store = self.group_model();
+        for i in 0..list_store.n_items() {
+            let group_id = list_store.item(i)
+                .expect(&format!("No item at position {}", i))
+                .downcast_ref::<Group>()
+                .expect("Item is not a Group")
+                .id();
+
+            if group_id == group.id() {
+                list_store.remove(i);
+                break;
+            }
+        }
     }
 }

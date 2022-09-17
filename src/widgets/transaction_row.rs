@@ -8,6 +8,8 @@ use adw::subclass::prelude::*;
 
 use once_cell::sync::{Lazy, OnceCell};
 
+use std::cell::RefCell;
+
 use crate::dialogs::*;
 use crate::models::*;
 use crate::widgets::*;
@@ -26,7 +28,9 @@ mod imp {
         #[template_child]
         pub options_button: TemplateChild<gtk::MenuButton>,
 
-        pub transaction: OnceCell<Transaction>
+        pub transaction: OnceCell<Transaction>,
+
+        pub bindings: RefCell<Vec<glib::Binding>>
     }
 
     #[glib::object_subclass]
@@ -57,14 +61,12 @@ mod imp {
             PROPERTIES.as_ref()
         }
 
-        fn set_property(&self, obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
+        fn set_property(&self, _obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
             match pspec.name() {
                 "transaction" => {
                     if let Ok(input) = value.get::<Transaction>() {
-                        match self.transaction.set(input) {
-                            Ok(_) => obj.init_row(),
-                            Err(_) => panic!("Transaction pointer was already set!")
-                        }
+                        self.transaction.set(input)
+                            .expect("Transaction pointer was already set!");
                     }
                 }
                 _ => unimplemented!()
@@ -73,6 +75,48 @@ mod imp {
 
         fn constructed(&self, obj: &Self::Type) {
             self.parent_constructed(obj);
+
+            let mut bindings = obj.imp().bindings.borrow_mut();
+            let transaction = obj.imp().transaction.get()
+                .expect("No transaction assigned to row");
+
+            // Bind transaction amount to label
+            let amount_binding = transaction
+                .bind_property("amount", &obj.imp().amount_label.get(), "label")
+                .transform_to(|_, value| {
+                    if let Ok(amount) = value.get::<f32>() {
+                        Some(format!("{:.2}", amount.abs()).to_value())
+                    } else { None }
+                })
+                .flags(glib::BindingFlags::SYNC_CREATE)
+                .build();
+            bindings.push(amount_binding);
+
+            // Listen for transaction type changes
+            transaction.connect_notify_local(
+                Some("tr-type"),
+                glib::clone!(@weak obj as parent => move |transaction, _| {
+                    parent.apply_css(transaction.tr_type());
+                })
+            );
+
+            // Bind transaction name to title
+            let name_binding = transaction
+                .bind_property("name", obj, "title")
+                .flags(glib::BindingFlags::SYNC_CREATE)
+                .build();
+            bindings.push(name_binding);
+
+            // Listen for transaction date changes
+            transaction.connect_notify_local(
+                Some("date"),
+                glib::clone!(@weak obj as parent => move |transaction, _| {
+                    parent.set_subtitle(&transaction.relative_date());
+                })
+            );
+
+            obj.apply_css(transaction.tr_type());
+            obj.set_subtitle(&transaction.relative_date());
 
             obj.setup_gactions();
         }
@@ -95,6 +139,10 @@ impl TransactionRow {
         glib::Object::new(&[
             ("transaction", &transaction),
         ]).expect("Failed to create `TransactionRow`.")
+    }
+
+    pub fn transaction(&self) -> Option<&Transaction> {
+        self.imp().transaction.get()
     }
 
     fn setup_gactions(&self) {
@@ -124,32 +172,23 @@ impl TransactionRow {
                 .downcast_ref::<GroupContent>().unwrap()
                 .imp().group.get().unwrap();
 
+            let application = parent.root().unwrap().downcast_ref::<gtk::Window>().unwrap().application().unwrap();
             group.delete_transaction(parent.imp().transaction.get().unwrap().id());
-            parent.save_group(group);
+            application.emit_by_name::<()>("save-group", &[&group]);
         }));
         transaction_action_group.add_action(&delete_action);
 
         self.insert_action_group("transaction", Some(&transaction_action_group));
     }
 
-    fn save_group(&self, group: &Group) {
-        app_data!(|data| {
-            data.save_group(group);
-        });
-    }
-
-    fn init_row(&self) {
-        let amount = self.imp().transaction.get().unwrap().signed_amount();
-
-        self.imp().amount_label.set_label(&format!("{:.2}", amount.abs()));
-
-        if amount.gt(&0.0) {
-            self.imp().amount_label.add_css_class("income");
-        } else {
-            self.imp().amount_label.add_css_class("expense");
+    fn apply_css(&self, tr_type: TransactionType) {
+        if let Some(cls) = self.imp().amount_label.css_classes().last() {
+            self.imp().amount_label.remove_css_class(cls);
         }
 
-        self.set_title(&self.imp().transaction.get().unwrap().name());
-        self.set_subtitle(&self.imp().transaction.get().unwrap().relative_date());
+        match tr_type {
+            TransactionType::EXPENSE => self.imp().amount_label.add_css_class("expense"),
+            TransactionType::INCOME => self.imp().amount_label.add_css_class("income")
+        }
     }
 }

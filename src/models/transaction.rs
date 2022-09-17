@@ -170,18 +170,22 @@ impl Transaction {
 
     pub fn set_name(&self, name: &str) {
         self.imp().inner.borrow_mut().name = name.to_string();
+        self.notify("name");
     }
 
     pub fn change_tr_type(&self, tr_type: TransactionType) {
         self.imp().inner.borrow_mut().tr_type = tr_type;
+        self.notify("tr-type");
     }
 
     pub fn set_amount(&self, amount: f32) {
         self.imp().inner.borrow_mut().amount = amount;
+        self.notify("amount");
     }
 
     pub fn set_date(&self, date: DateTime) {
         self.imp().inner.borrow_mut().date = String::from(date.format_iso8601().unwrap().as_str());
+        self.notify("date");
     }
 
     pub fn signed_amount(&self) -> f32 {

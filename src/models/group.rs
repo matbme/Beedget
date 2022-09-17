@@ -6,9 +6,9 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::gdk::RGBA;
 use gtk::{gio, glib, ClosureExpression, SignalListItemFactory};
-use glib::{ParamSpec, ParamSpecString};
+use glib::{ParamSpec, ParamSpecString, subclass::Signal};
 
-use once_cell::sync::Lazy;
+use once_cell::sync::{Lazy, OnceCell};
 
 use std::cell::RefCell;
 use std::path::Path;
@@ -36,7 +36,8 @@ mod imp {
 
     #[derive(Default)]
     pub struct Group {
-        pub inner: RefCell<GroupInner>
+        pub inner: RefCell<GroupInner>,
+        pub transaction_list_store: OnceCell<gio::ListStore>,
     }
 
     #[glib::object_subclass]
@@ -87,6 +88,24 @@ mod imp {
                 _ => unimplemented!()
             }
         }
+
+        fn signals() -> &'static [Signal] {
+            static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
+                vec![
+                    Signal::builder(
+                        "transaction-added",
+                        &[Transaction::static_type().into()],
+                        <()>::static_type().into()
+                    ).build(),
+                    Signal::builder(
+                        "transaction-removed",
+                        &[Transaction::static_type().into()],
+                        <()>::static_type().into()
+                    ).build()
+                ]
+            });
+            SIGNALS.as_ref()
+        }
     }
 }
 
@@ -119,27 +138,33 @@ impl Group {
 
         factory.connect_setup(move |_, list_item| {
             let row = GroupRow::empty();
-
             list_item.set_child(Some(&row));
+        });
 
-            list_item
-                .property_expression("item")
-                .chain_property::<Group>("name")
-                .bind(&row, "group-name", gtk::Widget::NONE);
+        factory.connect_bind(move |_, list_item| {
+            let group_row = list_item
+                .child()
+                .unwrap()
+                .downcast::<GroupRow>()
+                .unwrap();
 
-            list_item
-                .property_expression("item")
-                .chain_property::<Group>("emoji")
-                .bind(&row, "group-emoji", gtk::Widget::NONE);
+            let group_item = list_item
+                .item()
+                .unwrap()
+                .downcast::<Group>()
+                .unwrap();
 
-            list_item
-                .property_expression("item")
-                .chain_property::<Group>("color")
-                .bind(&row, "group-color", gtk::Widget::NONE);
+            group_row.bind(&group_item);
+        });
 
-            list_item
-                .property_expression("item")
-                .bind(&row, "group", gtk::Widget::NONE);
+        factory.connect_unbind(move |_, list_item| {
+            let group_row = list_item
+                .child()
+                .unwrap()
+                .downcast::<GroupRow>()
+                .unwrap();
+
+            group_row.unbind();
         });
 
         factory
@@ -219,6 +244,10 @@ impl Group {
 
     pub fn new_transaction(&self, transaction: Transaction) {
         self.imp().inner.borrow().transactions.borrow_mut().push(transaction);
+        self.emit_by_name::<()>(
+            "transaction-added",
+            &[&self.imp().inner.borrow().transactions.borrow().last().unwrap()]
+        );
     }
 
     pub fn delete_transaction(&self, transaction_id: Uuid) {
@@ -232,17 +261,46 @@ impl Group {
             }
         }
 
-        self.imp().inner.borrow().transactions.borrow_mut().remove(idx);
+        let removed = self.imp().inner.borrow().transactions.borrow_mut().remove(idx);
+        self.emit_by_name::<()>("transaction-removed", &[&removed]);
     }
 
-    pub fn transaction_model(&self) -> gio::ListStore {
-        let ls = gio::ListStore::new(TransactionRow::static_type());
+    pub fn transaction_model(&self) -> &gio::ListStore {
+        self.imp().transaction_list_store.get_or_init(|| {
+            let ls = gio::ListStore::new(TransactionRow::static_type());
 
-        for transaction in self.imp().inner.borrow().transactions.borrow().iter() {
-            let row = TransactionRow::new(transaction);
-            ls.append(&row);
-        }
+            for transaction in self.imp().inner.borrow().transactions.borrow().iter() {
+                let row = TransactionRow::new(transaction);
+                ls.append(&row);
+            }
 
-        ls
+            self.connect_closure("transaction-added", false, glib::closure_local!(move |group: Group, transaction: &Transaction| {
+                let row = TransactionRow::new(&transaction);
+
+                let list_store = group.imp().transaction_list_store.get().unwrap();
+                list_store.append(&row);
+            }));
+
+            self.connect_closure("transaction-removed", false, glib::closure_local!(move |group: Group, transaction: &Transaction| {
+                let list_store = group.imp().transaction_list_store.get().unwrap();
+
+                for i in 0..list_store.n_items() {
+                    let transaction_id = list_store.item(i)
+                        .expect(&format!("No item at position {}", i))
+                        .downcast_ref::<TransactionRow>()
+                        .expect("Item is not a TransactionRow")
+                        .transaction()
+                        .expect("No transaction set for TransactionRow")
+                        .id();
+
+                    if transaction_id == transaction.id() {
+                        list_store.remove(i);
+                        break;
+                    }
+                }
+            }));
+
+            ls
+        })
     }
 }

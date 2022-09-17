@@ -1,7 +1,7 @@
 use once_cell::sync::{Lazy, OnceCell};
 use std::path::{Path, PathBuf};
 
-use glib::clone;
+use glib::{clone, subclass::Signal};
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gdk, gio, glib};
@@ -9,7 +9,7 @@ use adw::subclass::prelude::*;
 
 use crate::config::VERSION;
 use crate::BeedgetWindow;
-use crate::models::SaveData;
+use crate::models::{Group, SaveData};
 
 pub static CLOCK_FORMAT: Lazy<String> = Lazy::new(|| {
     let desktop_settings = gio::Settings::new("org.gnome.desktop.interface");
@@ -50,6 +50,25 @@ mod imp {
             obj.setup_gactions();
             obj.load_css();
             obj.set_accels_for_action("app.quit", &["<primary>q"]);
+
+            obj.connect_closure("save-group", false, glib::closure_local!(move |application: Self::Type, group: &Group| {
+                if let Some(data) = application.imp().data.get() {
+                    data.save_group(group);
+                }
+            }));
+        }
+
+        fn signals() -> &'static [glib::subclass::Signal] {
+            static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
+                vec![
+                    Signal::builder(
+                        "save-group",
+                        &[Group::static_type().into()],
+                        <()>::static_type().into()
+                    ).build()
+                ]
+            });
+            SIGNALS.as_ref()
         }
     }
 

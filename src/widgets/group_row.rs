@@ -2,11 +2,11 @@ use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gdk, gio, glib, CompositeTemplate};
 use gdk::RGBA;
-use glib::{ParamSpec, ParamSpecString, ParamSpecObject};
+use glib::{ParamSpec, ParamSpecString};
 
 use gtk::cairo::{LineJoin, LinearGradient};
 
-use once_cell::sync::Lazy;
+use once_cell::sync::{Lazy, OnceCell};
 
 use std::cell::RefCell;
 use std::f64::consts::PI;
@@ -38,7 +38,9 @@ mod imp {
         #[template_child]
         pub options_menu: TemplateChild<gtk::PopoverMenu>,
 
-        pub group: RefCell<Group>
+        pub group: OnceCell<Group>,
+
+        pub bindings: RefCell<Vec<glib::Binding>>
     }
 
     #[glib::object_subclass]
@@ -60,10 +62,8 @@ mod imp {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
                 vec![
-                    ParamSpecString::builder("group-name").build(),
                     ParamSpecString::builder("group-color").build(),
                     ParamSpecString::builder("group-emoji").build(),
-                    ParamSpecObject::builder("group", Group::static_type()).build()
                 ]
             });
 
@@ -72,11 +72,6 @@ mod imp {
 
         fn set_property(&self, obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
             match pspec.name() {
-                "group-name" => {
-                    if let Ok(input) = value.get() {
-                        obj.set_label(input);
-                    }
-                }
                 "group-color" => {
                     if let Ok(input) = value.get() {
                         obj.set_draw_func(RGBA::parse(input).unwrap());
@@ -85,11 +80,6 @@ mod imp {
                 "group-emoji" => {
                     if let Ok(input) = value.get() {
                         obj.set_icon_emoji(input);
-                    }
-                }
-                "group" => {
-                    if let Ok(input) = value.get() {
-                        self.group.replace(input);
                     }
                 }
                 _ => unimplemented!()
@@ -119,14 +109,13 @@ mod imp {
 
 glib::wrapper! {
     pub struct GroupRow(ObjectSubclass<imp::GroupRow>)
-        @extends gtk::Widget,
+        @extends gtk::Box, gtk::Widget,
         @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget, gtk::Orientable;
 }
 
 impl GroupRow {
     pub fn new(group: &Group) -> Self {
         glib::Object::new(&[
-            ("group-name", &group.name()),
             ("group-color", &group.color()),
             ("group-emoji", &group.emoji())
         ]).expect("Failed to create `GroupRow`.")
@@ -137,6 +126,39 @@ impl GroupRow {
             .expect("Failed to create `GroupRow`.")
     }
 
+    pub fn bind(&self, group: &Group) {
+        let mut bindings = self.imp().bindings.borrow_mut();
+
+        let group_name_binding = group
+            .bind_property("name", &self.imp().name.get(), "label")
+            .flags(glib::BindingFlags::SYNC_CREATE)
+            .build();
+        bindings.push(group_name_binding);
+
+        let group_emoji_binding = group
+            .bind_property("emoji", self, "group-emoji")
+            .flags(glib::BindingFlags::SYNC_CREATE)
+            .build();
+        bindings.push(group_emoji_binding);
+
+        let group_color_binding = group
+            .bind_property("color", self, "group-color")
+            .flags(glib::BindingFlags::SYNC_CREATE)
+            .build();
+
+        bindings.push(group_color_binding);
+
+        if self.imp().group.get().is_none() {
+            self.imp().group.set(group.to_owned()).unwrap();
+        }
+    }
+
+    pub fn unbind(&self) {
+        for binding in self.imp().bindings.borrow_mut().drain(..) {
+            binding.unbind();
+        }
+    }
+
     fn setup_gactions(&self) {
         let group_action_group = gio::SimpleActionGroup::new();
 
@@ -144,7 +166,7 @@ impl GroupRow {
         edit_action.connect_activate(glib::clone!(@weak self as parent => move |_, _| {
             let dialog = GroupDialog::edit(
                 parent.root().unwrap().downcast_ref::<gtk::Window>().unwrap(),
-                &parent.imp().group.borrow()
+                &parent.imp().group.get().unwrap()
             );
             dialog.present();
         }));
@@ -215,16 +237,12 @@ impl GroupRow {
         self.imp().icon.queue_draw();
     }
 
-    fn set_label(&self, label: &str) {
-        self.imp().name.set_label(&label);
-    }
-
     fn set_icon_emoji(&self, icon: &str) {
         self.imp().icon_emoji.set_label(&icon);
         self.imp().overlay.add_overlay(self.imp().icon_emoji.upcast_ref::<gtk::Label>());
     }
 
     fn delete_group(&self) {
-        app_data!(|data| data.delete_group(&self.imp().group.borrow()));
+        app_data!(|data| data.delete_group(&self.imp().group.get().unwrap()));
     }
 }
