@@ -14,8 +14,7 @@ use std::f64::consts::PI;
 use crate::force;
 use crate::dialogs::*;
 use crate::models::*;
-
-use beedget::app_data;
+use crate::application;
 
 mod imp {
     use super::*;
@@ -243,6 +242,6 @@ impl GroupRow {
     }
 
     fn delete_group(&self) {
-        app_data!(|data| data.delete_group(&self.imp().group.get().unwrap()));
+        application!(self @as crate::BeedgetApplication).data().delete_group(&self.imp().group.get().unwrap());
     }
 }

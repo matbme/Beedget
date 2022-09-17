@@ -14,7 +14,7 @@ use emojis;
 use rand::prelude::*;
 
 use crate::models::*;
-use beedget::app_data;
+use crate::application;
 
 mod imp {
     use super::*;
@@ -145,18 +145,17 @@ impl GroupDialog {
     }
 
     fn create_group(&self) {
-        app_data!(|data| {
-            let group = Group::new(
-                &self.imp().current_emoji.borrow(),
-                self.imp().group_color.rgba(),
-                &self.imp().group_name.text()
-            );
+        let group = Group::new(
+            &self.imp().current_emoji.borrow(),
+            self.imp().group_color.rgba(),
+            &self.imp().group_name.text()
+        );
 
-            match data.new_group(group) {
-                Ok(()) => { self.destroy(); }
-                Err(error) => { panic!("{}", error); }
-            }
-        });
+        let application = application!(self @as crate::BeedgetApplication);
+        match application.data().new_group(group) {
+            Ok(()) => { self.destroy(); }
+            Err(error) => { panic!("{}", error); }
+        }
     }
 
     fn modify_group(&self) {
@@ -172,7 +171,7 @@ impl GroupDialog {
             .expect("No group emoji selected");
         group.set_property("emoji", emoji.to_value());
 
-        app_data!(|data| data.save_group(group));
+        application!(self @as crate::BeedgetApplication).data().save_group(group);
 
         self.destroy();
     }

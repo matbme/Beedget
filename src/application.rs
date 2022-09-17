@@ -103,6 +103,11 @@ impl BeedgetApplication {
             .expect("Failed to create BeedgetApplication")
     }
 
+    pub fn data(&self) -> &SaveData {
+        self.imp().data.get()
+            .expect("Save data not loaded")
+    }
+
     fn setup_gactions(&self) {
         let quit_action = gio::SimpleAction::new("quit", None);
         quit_action.connect_activate(clone!(@weak self as app => move |_, _| {

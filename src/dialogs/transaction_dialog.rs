@@ -9,7 +9,7 @@ use once_cell::sync::{Lazy, OnceCell};
 
 use crate::widgets::*;
 use crate::models::*;
-use beedget::app_data;
+use crate::application;
 
 mod imp {
     use super::*;
@@ -172,7 +172,7 @@ impl TransactionDialog {
         let selected_group = self.imp().group_select
             .selected_item().unwrap()
             .downcast::<Group>().unwrap();
-        app_data!(|data| data.save_group(&selected_group));
+        application!(self @as crate::BeedgetApplication).data().save_group(&selected_group);
 
         self.destroy();
     }
@@ -183,7 +183,7 @@ impl TransactionDialog {
         let prev_group = self.imp().current_group.get().unwrap();
         prev_group.delete_transaction(transaction.id());
 
-        app_data!(|data| data.save_group(prev_group));
+        application!(self @as crate::BeedgetApplication).data().save_group(prev_group);
 
         self.create_transaction();
     }
@@ -288,7 +288,10 @@ impl TransactionDialog {
 
     fn populate_group_select_dropdown(&self) {
         self.imp().group_select.set_factory(Some(&Group::factory()));
-        app_data!(|data| self.imp().group_select.set_model(data.group_model.get()));
+
+        let application = application!(self @as crate::BeedgetApplication);
+        self.imp().group_select.set_model(Some(application.data().group_model()));
+
         self.imp().group_select.set_expression(Some(&Group::search_expression()));
     }
 

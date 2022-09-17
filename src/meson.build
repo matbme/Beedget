@@ -24,7 +24,6 @@ rust_sources = files(
   'dialogs/group_dialog.rs',
   'dialogs/mod.rs',
   'dialogs/transaction_dialog.rs',
-  'lib.rs',
   'main.rs',
   'models/data_object.rs',
   'models/group.rs',

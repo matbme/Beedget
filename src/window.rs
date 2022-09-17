@@ -9,8 +9,7 @@ use adw::subclass::application_window::AdwApplicationWindowImpl;
 use crate::models::*;
 use crate::widgets::*;
 use crate::dialogs::*;
-
-use beedget::app_data;
+use crate::application;
 
 mod imp {
     use super::*;
@@ -58,7 +57,10 @@ mod imp {
             self.parent_constructed(obj);
             obj.setup_gactions();
 
-            obj.connect_init_sidebar();
+            // Wait for window to receive application and initialize sidebar with save data
+            obj.connect_application_notify(clone!(@weak obj as parent => move |_| {
+                parent.init_sidebar();
+            }));
         }
     }
 
@@ -120,29 +122,20 @@ impl BeedgetWindow {
         self.add_action(&open_transaction_dialog_action);
     }
 
-    /// Window only receives application after construction, so we wait to
-    /// initialize content when we're sure it has been set.
-    fn connect_init_sidebar(&self) {
-        self.connect_application_notify(clone!(@weak self as win => move |_| {
-            win.init_sidebar();
-        }));
-    }
-
     /// Initialize sidebar with groups from application data
     fn init_sidebar(&self) {
-        app_data!(|data| {
-            let model = data.group_model();
+        let application = application!(self @as crate::BeedgetApplication);
+        let model = application.data().group_model();
 
-            let filter = gtk::StringFilter::new(Some(Group::search_expression()));
-            let filter_model = gtk::FilterListModel::new(Some(model), Some(&filter));
-            let selection_model = gtk::SingleSelection::new(Some(&filter_model));
+        let filter = gtk::StringFilter::new(Some(Group::search_expression()));
+        let filter_model = gtk::FilterListModel::new(Some(model), Some(&filter));
+        let selection_model = gtk::SingleSelection::new(Some(&filter_model));
 
-            selection_model.connect_selected_notify(clone!(@weak self as win => move |model| {
-                win.set_content_page(model);
-            }));
+        selection_model.connect_selected_notify(clone!(@weak self as win => move |model| {
+            win.set_content_page(model);
+        }));
 
-            self.imp().sidebar.set_model(Some(&selection_model));
-        });
+        self.imp().sidebar.set_model(Some(&selection_model));
 
         self.imp().sidebar.set_factory(Some(&Group::factory()));
 
