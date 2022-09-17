@@ -1,15 +1,15 @@
+use glib::{ParamFlags, ParamSpec, ParamSpecObject};
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::{gio::ListStore, gdk, glib, CompositeTemplate};
-use glib::{ParamFlags, ParamSpec, ParamSpecObject};
+use gtk::{gdk, gio::ListStore, glib, CompositeTemplate};
 
 use adw::subclass::prelude::*;
 
 use once_cell::sync::{Lazy, OnceCell};
 
-use crate::widgets::*;
-use crate::models::*;
 use crate::application;
+use crate::models::*;
+use crate::widgets::*;
 
 mod imp {
     use super::*;
@@ -42,7 +42,7 @@ mod imp {
         pub amount_entry: TemplateChild<gtk::Entry>,
 
         pub edit_transaction: OnceCell<Transaction>,
-        pub current_group: OnceCell<Group>
+        pub current_group: OnceCell<Group>,
     }
 
     #[glib::object_subclass]
@@ -70,20 +70,26 @@ mod imp {
                         .build(),
                     ParamSpecObject::builder("group", Group::static_type())
                         .flags(ParamFlags::CONSTRUCT | ParamFlags::READWRITE)
-                        .build()
+                        .build(),
                 ]
             });
 
             PROPERTIES.as_ref()
         }
 
-        fn set_property(&self, obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
+        fn set_property(
+            &self,
+            obj: &Self::Type,
+            _id: usize,
+            value: &glib::Value,
+            pspec: &ParamSpec,
+        ) {
             match pspec.name() {
                 "transaction" => {
                     if let Ok(input) = value.get::<Transaction>() {
                         match self.edit_transaction.set(input) {
                             Ok(_) => obj.populate_transaction_values(),
-                            Err(_) => panic!("Transaction pointer was already set!")
+                            Err(_) => panic!("Transaction pointer was already set!"),
                         }
                     }
                 }
@@ -91,11 +97,11 @@ mod imp {
                     if let Ok(input) = value.get::<Group>() {
                         match self.current_group.set(input) {
                             Ok(_) => obj.set_current_group(),
-                            Err(_) => panic!("Group pointer was already set!")
+                            Err(_) => panic!("Group pointer was already set!"),
                         }
                     }
                 }
-                _ => unimplemented!()
+                _ => unimplemented!(),
             }
         }
 
@@ -130,17 +136,17 @@ glib::wrapper! {
 #[gtk::template_callbacks]
 impl TransactionDialog {
     pub fn new(parent: &gtk::Window) -> Self {
-        glib::Object::new(&[
-            ("transient-for", &Some(parent))
-        ]).expect("Failed to create `TransactionDialog`.")
+        glib::Object::new(&[("transient-for", &Some(parent))])
+            .expect("Failed to create `TransactionDialog`.")
     }
 
     pub fn edit(parent: &gtk::Window, edit_transaction: &Transaction, group: &Group) -> Self {
         glib::Object::new(&[
             ("transient-for", &Some(parent)),
             ("transaction", &edit_transaction),
-            ("group", &group)
-        ]).expect("Failed to create `TransactionDialog`.")
+            ("group", &group),
+        ])
+        .expect("Failed to create `TransactionDialog`.")
     }
 
     #[template_callback]
@@ -151,9 +157,13 @@ impl TransactionDialog {
     #[template_callback]
     fn confirm_transaction(&self) {
         if self.imp().edit_transaction.get().is_some() {
-            let selected_group_id = self.imp().group_select
-                .selected_item().unwrap()
-                .downcast_ref::<Group>().unwrap()
+            let selected_group_id = self
+                .imp()
+                .group_select
+                .selected_item()
+                .unwrap()
+                .downcast_ref::<Group>()
+                .unwrap()
                 .id();
 
             let current_group_id = self.imp().current_group.get().unwrap().id();
@@ -169,10 +179,16 @@ impl TransactionDialog {
             self.create_transaction();
         }
 
-        let selected_group = self.imp().group_select
-            .selected_item().unwrap()
-            .downcast::<Group>().unwrap();
-        application!(self @as crate::BeedgetApplication).data().save_group(&selected_group);
+        let selected_group = self
+            .imp()
+            .group_select
+            .selected_item()
+            .unwrap()
+            .downcast::<Group>()
+            .unwrap();
+        application!(self @as crate::BeedgetApplication)
+            .data()
+            .save_group(&selected_group);
 
         self.destroy();
     }
@@ -183,7 +199,9 @@ impl TransactionDialog {
         let prev_group = self.imp().current_group.get().unwrap();
         prev_group.delete_transaction(transaction.id());
 
-        application!(self @as crate::BeedgetApplication).data().save_group(prev_group);
+        application!(self @as crate::BeedgetApplication)
+            .data()
+            .save_group(prev_group);
 
         self.create_transaction();
     }
@@ -192,19 +210,21 @@ impl TransactionDialog {
         let transaction = self.imp().edit_transaction.get().unwrap();
 
         transaction.set_name(&self.imp().transaction_name.text());
-        transaction.change_tr_type(
-            if self.imp().expense_check_button.is_active() {
-                TransactionType::EXPENSE
-            } else {
-                TransactionType::INCOME
-            }
-        );
+        transaction.change_tr_type(if self.imp().expense_check_button.is_active() {
+            TransactionType::EXPENSE
+        } else {
+            TransactionType::INCOME
+        });
         transaction.set_amount(self.amount_entry_value().unwrap());
         transaction.set_date(
             glib::DateTime::from_iso8601(
-                self.imp().dt_picker.property::<glib::GString>("selected-date").as_str(),
-                None
-            ).expect("Invalid date")
+                self.imp()
+                    .dt_picker
+                    .property::<glib::GString>("selected-date")
+                    .as_str(),
+                None,
+            )
+            .expect("Invalid date"),
         );
     }
 
@@ -220,14 +240,22 @@ impl TransactionDialog {
             },
             self.amount_entry_value().unwrap(),
             glib::DateTime::from_iso8601(
-                self.imp().dt_picker.property::<glib::GString>("selected-date").as_str(),
-                None
-            ).expect("Invalid date")
+                self.imp()
+                    .dt_picker
+                    .property::<glib::GString>("selected-date")
+                    .as_str(),
+                None,
+            )
+            .expect("Invalid date"),
         );
 
-        let selected_group = self.imp().group_select
-            .selected_item().unwrap()
-            .downcast::<Group>().unwrap();
+        let selected_group = self
+            .imp()
+            .group_select
+            .selected_item()
+            .unwrap()
+            .downcast::<Group>()
+            .unwrap();
 
         selected_group.new_transaction(transaction);
     }
@@ -235,24 +263,28 @@ impl TransactionDialog {
     /// Disables button if name and/or amount entries are empty
     fn connect_add_button_valid(&self) {
         // Set initial
-        self.imp().add_button.set_sensitive(self.imp().transaction_name.text_length() > 0);
+        self.imp()
+            .add_button
+            .set_sensitive(self.imp().transaction_name.text_length() > 0);
 
         // Subscribe to changes
-        self.imp().transaction_name.buffer()
-            .connect_length_notify(glib::clone!(@weak self as parent => move |_| {
-                parent.imp().add_button.set_sensitive(
-                    parent.imp().transaction_name.text_length() > 0 &&
-                    parent.amount_entry_value().is_some()
-                );
-        }));
+        self.imp().transaction_name.buffer().connect_length_notify(
+            glib::clone!(@weak self as parent => move |_| {
+                    parent.imp().add_button.set_sensitive(
+                        parent.imp().transaction_name.text_length() > 0 &&
+                        parent.amount_entry_value().is_some()
+                    );
+            }),
+        );
 
-        self.imp().amount_entry.buffer()
-            .connect_text_notify(glib::clone!(@weak self as parent => move |_| {
-                parent.imp().add_button.set_sensitive(
-                    parent.amount_entry_value().is_some() &&
-                    parent.imp().transaction_name.text_length() > 0
-                );
-        }));
+        self.imp().amount_entry.buffer().connect_text_notify(
+            glib::clone!(@weak self as parent => move |_| {
+                    parent.imp().add_button.set_sensitive(
+                        parent.amount_entry_value().is_some() &&
+                        parent.imp().transaction_name.text_length() > 0
+                    );
+            }),
+        );
     }
 
     fn amount_entry_value(&self) -> Option<f32> {
@@ -273,15 +305,17 @@ impl TransactionDialog {
     /// Handle keyboard events
     fn connect_key_event_controller(&self) {
         let key_controller = gtk::EventControllerKey::new();
-        key_controller.connect_key_pressed(glib::clone!(@strong self as parent => move |_, keyval, _, _| {
-            match keyval {
-                gdk::Key::Escape => { // Esc closes dialog
-                    parent.destroy();
-                    gtk::Inhibit(true)
+        key_controller.connect_key_pressed(
+            glib::clone!(@strong self as parent => move |_, keyval, _, _| {
+                match keyval {
+                    gdk::Key::Escape => { // Esc closes dialog
+                        parent.destroy();
+                        gtk::Inhibit(true)
+                    }
+                    _ => { gtk::Inhibit(false) }
                 }
-                _ => { gtk::Inhibit(false) }
-            }
-        }));
+            }),
+        );
 
         self.add_controller(&key_controller);
     }
@@ -290,9 +324,13 @@ impl TransactionDialog {
         self.imp().group_select.set_factory(Some(&Group::factory()));
 
         let application = application!(self @as crate::BeedgetApplication);
-        self.imp().group_select.set_model(Some(application.data().group_model()));
+        self.imp()
+            .group_select
+            .set_model(Some(application.data().group_model()));
 
-        self.imp().group_select.set_expression(Some(&Group::search_expression()));
+        self.imp()
+            .group_select
+            .set_expression(Some(&Group::search_expression()));
     }
 
     /// Fill entries with transaction values for edit
@@ -301,13 +339,16 @@ impl TransactionDialog {
 
         let transaction = self.imp().edit_transaction.get().unwrap();
 
-        self.imp().transaction_name.set_buffer(&gtk::EntryBuffer::new(
-            Some(&transaction.name())
-        ));
+        self.imp()
+            .transaction_name
+            .set_buffer(&gtk::EntryBuffer::new(Some(&transaction.name())));
 
-        self.imp().amount_entry.set_buffer(&gtk::EntryBuffer::new(
-            Some(&format!("{:.2}", transaction.amount()))
-        ));
+        self.imp()
+            .amount_entry
+            .set_buffer(&gtk::EntryBuffer::new(Some(&format!(
+                "{:.2}",
+                transaction.amount()
+            ))));
 
         match transaction.tr_type() {
             TransactionType::EXPENSE => self.imp().expense_check_button.set_active(true),
@@ -316,7 +357,7 @@ impl TransactionDialog {
 
         self.imp().dt_picker.set_property(
             "selected-date",
-            transaction.date().format_iso8601().expect("Invalid date")
+            transaction.date().format_iso8601().expect("Invalid date"),
         );
     }
 
@@ -328,9 +369,13 @@ impl TransactionDialog {
             self.populate_group_select_dropdown();
         }
 
-        let group_idx = self.imp().group_select
-            .model().unwrap()
-            .downcast_ref::<ListStore>().unwrap()
+        let group_idx = self
+            .imp()
+            .group_select
+            .model()
+            .unwrap()
+            .downcast_ref::<ListStore>()
+            .unwrap()
             .find(self.imp().current_group.get().unwrap())
             .unwrap();
 

@@ -1,14 +1,15 @@
-use std::path::Path;
-use std::fs::{File, remove_file};
+use std::fs::{remove_file, File};
 use std::io::prelude::*;
+use std::path::Path;
 
 use anyhow::Result;
 use serde::{de::DeserializeOwned, Serialize};
 
 pub trait DataObject {
-    fn load_from_file(path: &Path) -> Result<Self> where
-        Self: DeserializeOwned {
-
+    fn load_from_file(path: &Path) -> Result<Self>
+    where
+        Self: DeserializeOwned,
+    {
         let mut file = File::open(&path)?;
         let mut fc = String::new();
 
@@ -21,9 +22,10 @@ pub trait DataObject {
 
     fn filename(&self) -> String;
 
-    fn save_to_file(&self, path: &Path) -> Result<()> where
-        Self: Serialize {
-
+    fn save_to_file(&self, path: &Path) -> Result<()>
+    where
+        Self: Serialize,
+    {
         let filename = path.join(self.filename());
         let serialized = serde_json::to_string(self)?;
         let mut file = File::create(filename)?;

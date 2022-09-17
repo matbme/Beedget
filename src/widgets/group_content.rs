@@ -1,7 +1,7 @@
+use glib::{ParamFlags, ParamSpec, ParamSpecObject};
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{glib, CompositeTemplate};
-use glib::{ParamFlags, ParamSpec, ParamSpecObject};
 
 use once_cell::sync::{Lazy, OnceCell};
 
@@ -17,7 +17,7 @@ mod imp {
         #[template_child]
         pub transaction_history: TemplateChild<gtk::ListBox>,
 
-        pub group: OnceCell<Group>
+        pub group: OnceCell<Group>,
     }
 
     #[glib::object_subclass]
@@ -38,17 +38,21 @@ mod imp {
     impl ObjectImpl for GroupContent {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![
-                    ParamSpecObject::builder("group", Group::static_type())
-                        .flags(ParamFlags::CONSTRUCT | ParamFlags::WRITABLE)
-                        .build()
-                ]
+                vec![ParamSpecObject::builder("group", Group::static_type())
+                    .flags(ParamFlags::CONSTRUCT | ParamFlags::WRITABLE)
+                    .build()]
             });
 
             PROPERTIES.as_ref()
         }
 
-        fn set_property(&self, obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
+        fn set_property(
+            &self,
+            obj: &Self::Type,
+            _id: usize,
+            value: &glib::Value,
+            pspec: &ParamSpec,
+        ) {
             match pspec.name() {
                 "group" => {
                     if let Ok(input) = value.get::<Group>() {
@@ -58,7 +62,7 @@ mod imp {
                         }
                     }
                 }
-                _ => unimplemented!()
+                _ => unimplemented!(),
             }
         }
 
@@ -79,21 +83,17 @@ glib::wrapper! {
 
 impl GroupContent {
     pub fn new(group: &Group) -> Self {
-        glib::Object::new(&[
-            ("group", &group),
-        ]).expect("Failed to create `GroupContent`.")
+        glib::Object::new(&[("group", &group)]).expect("Failed to create `GroupContent`.")
     }
 
     fn init_transaction_history(&self) {
-        let group = self.imp().group.get()
-            .expect("Group property is not set");
+        let group = self.imp().group.get().expect("Group property is not set");
 
-        self.imp().transaction_history.bind_model(
-            Some(group.transaction_model()),
-            move |item| {
+        self.imp()
+            .transaction_history
+            .bind_model(Some(group.transaction_model()), move |item| {
                 let row = item.downcast_ref::<TransactionRow>().unwrap().clone();
                 row.upcast::<gtk::Widget>()
-            }
-        );
+            });
     }
 }

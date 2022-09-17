@@ -1,13 +1,13 @@
-use std::path::PathBuf;
 use std::cell::RefCell;
 use std::fs;
 use std::io::ErrorKind;
+use std::path::PathBuf;
 
 use anyhow::{Error, Result};
 use once_cell::sync::OnceCell;
 
-use gtk::prelude::*;
 use gtk::gio;
+use gtk::prelude::*;
 
 use crate::models::Group;
 
@@ -16,20 +16,20 @@ pub struct SaveData {
     pub groups: RefCell<Vec<Group>>,
     save_path: PathBuf,
 
-    pub group_model: OnceCell<gio::ListStore>
+    pub group_model: OnceCell<gio::ListStore>,
 }
 
 impl SaveData {
     pub fn new(pb: &PathBuf) -> Self {
         match SaveData::load_groups(pb) {
-            Ok(groups) => {
-                Self {
-                    groups: RefCell::new(groups),
-                    save_path: pb.to_owned(),
-                    group_model: OnceCell::new()
-                }
+            Ok(groups) => Self {
+                groups: RefCell::new(groups),
+                save_path: pb.to_owned(),
+                group_model: OnceCell::new(),
+            },
+            Err(_) => {
+                panic!("Could not access save data directory");
             }
-            Err(_) => { panic!("Could not access save data directory"); }
         }
     }
 
@@ -51,8 +51,8 @@ impl SaveData {
                     fs::create_dir_all(pb.as_path().join(r"groups"))?;
                     Ok(vec![])
                 }
-                _ => { Err(Error::new(error)) }
-            }
+                _ => Err(Error::new(error)),
+            },
         }
     }
 
@@ -74,7 +74,9 @@ impl SaveData {
         self.groups.borrow_mut().push(group);
 
         let stored_groups = self.groups.borrow();
-        stored_groups.last().unwrap()
+        stored_groups
+            .last()
+            .unwrap()
             .save_to_file(self.save_path.as_path().join(r"groups").as_path())?;
 
         self.group_model().append(stored_groups.last().unwrap());
@@ -84,18 +86,21 @@ impl SaveData {
 
     /// Save group file after changes
     pub fn save_group(&self, group: &Group) {
-        group.save_to_file(self.save_path.as_path().join(r"groups").as_path())
+        group
+            .save_to_file(self.save_path.as_path().join(r"groups").as_path())
             .expect("Could not save group into file");
     }
 
     /// Delete group and all transactions
     pub fn delete_group(&self, group: &Group) {
-        group.delete_file(self.save_path.as_path().join(r"groups").as_path())
+        group
+            .delete_file(self.save_path.as_path().join(r"groups").as_path())
             .expect("Could not delete group file");
 
         let list_store = self.group_model();
         for i in 0..list_store.n_items() {
-            let group_id = list_store.item(i)
+            let group_id = list_store
+                .item(i)
                 .expect(&format!("No item at position {}", i))
                 .downcast_ref::<Group>()
                 .expect("Item is not a Group")

@@ -3,8 +3,10 @@
 macro_rules! force {
     ( $x:expr ) => {
         match $x {
-            Ok(()) => { }
-            Err(error) => { panic!("{:?}", error); }
+            Ok(()) => {}
+            Err(error) => {
+                panic!("{:?}", error);
+            }
         }
     };
 }
@@ -17,29 +19,24 @@ macro_rules! force {
 /// ```
 #[macro_export]
 macro_rules! application {
-    ($ref:ident @as $downcast:path) => {
-        {
-            let root = $ref
-                .root()
-                .expect("Widget does not contain a root");
+    ($ref:ident @as $downcast:path) => {{
+        let root = $ref.root().expect("Widget does not contain a root");
 
-            let window = root
-                .downcast_ref::<gtk::Window>()
-                .expect("Widget's root is not a GTK Window");
+        let window = root
+            .downcast_ref::<gtk::Window>()
+            .expect("Widget's root is not a GTK Window");
 
-            let application = window
+        let application = window.application().unwrap_or_else(|| {
+            window
+                .transient_for()
+                .expect("Window is not transient for anything.")
                 .application()
-                .unwrap_or_else(|| {
-                    window
-                        .transient_for()
-                        .expect("Window is not transient for anything.")
-                        .application()
-                        .expect("No application set for transient window")
-                });
+                .expect("No application set for transient window")
+        });
 
-            application
-                .downcast::<$downcast>()
-                .expect(&format!("Could not downcast Application to {}", stringify!($downcast)))
-        }
-    }
+        application.downcast::<$downcast>().expect(&format!(
+            "Could not downcast Application to {}",
+            stringify!($downcast)
+        ))
+    }};
 }

@@ -1,15 +1,15 @@
 use once_cell::sync::{Lazy, OnceCell};
 use std::path::{Path, PathBuf};
 
+use adw::subclass::prelude::*;
 use glib::{clone, subclass::Signal};
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gdk, gio, glib};
-use adw::subclass::prelude::*;
 
 use crate::config::VERSION;
-use crate::BeedgetWindow;
 use crate::models::{Group, SaveData};
+use crate::BeedgetWindow;
 
 pub static CLOCK_FORMAT: Lazy<String> = Lazy::new(|| {
     let desktop_settings = gio::Settings::new("org.gnome.desktop.interface");
@@ -23,7 +23,7 @@ mod imp {
     #[derive(Debug)]
     pub struct BeedgetApplication {
         pub settings: OnceCell<gio::Settings>,
-        pub data: OnceCell<SaveData>
+        pub data: OnceCell<SaveData>,
     }
 
     #[glib::object_subclass]
@@ -37,7 +37,7 @@ mod imp {
         fn default() -> Self {
             Self {
                 settings: OnceCell::with_value(gio::Settings::new("com.github.matbme.beedget")),
-                data: OnceCell::new()
+                data: OnceCell::new(),
             }
         }
     }
@@ -51,22 +51,25 @@ mod imp {
             obj.load_css();
             obj.set_accels_for_action("app.quit", &["<primary>q"]);
 
-            obj.connect_closure("save-group", false, glib::closure_local!(move |application: Self::Type, group: &Group| {
-                if let Some(data) = application.imp().data.get() {
-                    data.save_group(group);
-                }
-            }));
+            obj.connect_closure(
+                "save-group",
+                false,
+                glib::closure_local!(move |application: Self::Type, group: &Group| {
+                    if let Some(data) = application.imp().data.get() {
+                        data.save_group(group);
+                    }
+                }),
+            );
         }
 
         fn signals() -> &'static [glib::subclass::Signal] {
             static SIGNALS: Lazy<Vec<Signal>> = Lazy::new(|| {
-                vec![
-                    Signal::builder(
-                        "save-group",
-                        &[Group::static_type().into()],
-                        <()>::static_type().into()
-                    ).build()
-                ]
+                vec![Signal::builder(
+                    "save-group",
+                    &[Group::static_type().into()],
+                    <()>::static_type().into(),
+                )
+                .build()]
             });
             SIGNALS.as_ref()
         }
@@ -104,8 +107,7 @@ impl BeedgetApplication {
     }
 
     pub fn data(&self) -> &SaveData {
-        self.imp().data.get()
-            .expect("Save data not loaded")
+        self.imp().data.get().expect("Save data not loaded")
     }
 
     fn setup_gactions(&self) {
@@ -141,9 +143,17 @@ impl BeedgetApplication {
         let data_buf = if save_path.is_empty() {
             let mut dbf = glib::user_data_dir();
             dbf.push(r"beedget");
-            match self.imp().settings.get().unwrap().set_string("save-path", dbf.as_path().to_str().unwrap()) {
-                Ok(()) => { dbf }
-                Err(error) => { panic!("{}", error) }
+            match self
+                .imp()
+                .settings
+                .get()
+                .unwrap()
+                .set_string("save-path", dbf.as_path().to_str().unwrap())
+            {
+                Ok(()) => dbf,
+                Err(error) => {
+                    panic!("{}", error)
+                }
             }
         } else {
             let mut dbf = PathBuf::new();
@@ -151,7 +161,10 @@ impl BeedgetApplication {
             dbf
         };
 
-        self.imp().data.set(SaveData::new(&data_buf)).expect("Failed to load save data.");
+        self.imp()
+            .data
+            .set(SaveData::new(&data_buf))
+            .expect("Failed to load save data.");
     }
 
     fn load_css(&self) {

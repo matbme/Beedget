@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+use glib::{DateTime, ParamSpec, ParamSpecFloat, ParamSpecString};
+use gtk::glib;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::glib;
-use glib::{DateTime, ParamSpec, ParamSpecString, ParamSpecFloat};
 
 use once_cell::sync::Lazy;
 
@@ -17,7 +17,7 @@ use crate::application::CLOCK_FORMAT;
 #[derive(Debug, Serialize, Deserialize)]
 pub enum TransactionType {
     EXPENSE,
-    INCOME
+    INCOME,
 }
 
 pub fn transaction_type_to_string(tr_type: &TransactionType) -> String {
@@ -31,7 +31,7 @@ pub fn transaction_type_from_string(tr_str: &str) -> TransactionType {
     match tr_str {
         "EXPENSE" => TransactionType::EXPENSE,
         "INCOME" => TransactionType::INCOME,
-        _ => unimplemented!()
+        _ => unimplemented!(),
     }
 }
 
@@ -43,15 +43,15 @@ mod imp {
     pub struct TransactionInner {
         pub id: Uuid,
         pub name: String,
-        #[derivative(Default(value="TransactionType::EXPENSE"))]
+        #[derivative(Default(value = "TransactionType::EXPENSE"))]
         pub tr_type: TransactionType,
         pub amount: f32,
-        pub date: String
+        pub date: String,
     }
 
     #[derive(Default)]
     pub struct Transaction {
-        pub inner: RefCell<TransactionInner>
+        pub inner: RefCell<TransactionInner>,
     }
 
     #[glib::object_subclass]
@@ -76,14 +76,25 @@ mod imp {
             PROPERTIES.as_ref()
         }
 
-        fn set_property(&self, _obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
+        fn set_property(
+            &self,
+            _obj: &Self::Type,
+            _id: usize,
+            value: &glib::Value,
+            pspec: &ParamSpec,
+        ) {
             match pspec.name() {
-                "uid" => self.inner.borrow_mut().id = Uuid::parse_str(value.get().unwrap()).unwrap(),
+                "uid" => {
+                    self.inner.borrow_mut().id = Uuid::parse_str(value.get().unwrap()).unwrap()
+                }
                 "name" => self.inner.borrow_mut().name = value.get().unwrap(),
-                "tr-type" => self.inner.borrow_mut().tr_type = transaction_type_from_string(value.get().unwrap()),
+                "tr-type" => {
+                    self.inner.borrow_mut().tr_type =
+                        transaction_type_from_string(value.get().unwrap())
+                }
                 "amount" => self.inner.borrow_mut().amount = value.get().unwrap(),
                 "date" => self.inner.borrow_mut().date = value.get().unwrap(),
-                _ => unimplemented!()
+                _ => unimplemented!(),
             }
         }
 
@@ -94,7 +105,7 @@ mod imp {
                 "tr-type" => transaction_type_to_string(&self.inner.borrow().tr_type).to_value(),
                 "amount" => self.inner.borrow().amount.to_value(),
                 "date" => self.inner.borrow().date.to_value(),
-                _ => unimplemented!()
+                _ => unimplemented!(),
             }
         }
     }
@@ -111,18 +122,21 @@ impl Default for Transaction {
 }
 
 impl Serialize for Transaction {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where
-        S: serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
         self.imp().inner.serialize(serializer)
     }
 }
 
 impl<'de> Deserialize<'de> for Transaction {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where
-        D: serde::Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
         let inner = imp::TransactionInner::deserialize(deserializer)?;
-        let transaction: Self = glib::Object::new(&[])
-            .expect("Failed to create Transaction");
+        let transaction: Self = glib::Object::new(&[]).expect("Failed to create Transaction");
 
         transaction.imp().inner.replace(inner);
 
@@ -137,8 +151,9 @@ impl Transaction {
             ("name", &name),
             ("tr-type", &transaction_type_to_string(&tr_type)),
             ("amount", &amount),
-            ("date", &date.format_iso8601().unwrap().as_str())
-        ]).expect("Failed to create Transaction")
+            ("date", &date.format_iso8601().unwrap().as_str()),
+        ])
+        .expect("Failed to create Transaction")
     }
 
     pub fn empty() -> Self {
@@ -202,7 +217,7 @@ impl Transaction {
         let day_component = match now.day_of_year() - date_obj.day_of_year() {
             0 => String::from("Today"),
             1 => String::from("Yesterday"),
-            _ => date_obj.format("%x").unwrap().to_string()
+            _ => date_obj.format("%x").unwrap().to_string(),
         };
 
         let time_component = if CLOCK_FORMAT.as_str() == "12h" {

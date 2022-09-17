@@ -1,12 +1,12 @@
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
-use anyhow::Result;
 
+use glib::{subclass::Signal, ParamSpec, ParamSpecString};
+use gtk::gdk::RGBA;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
-use gtk::gdk::RGBA;
 use gtk::{gio, glib, ClosureExpression, SignalListItemFactory};
-use glib::{ParamSpec, ParamSpecString, subclass::Signal};
 
 use once_cell::sync::{Lazy, OnceCell};
 
@@ -54,28 +54,32 @@ mod imp {
                     ParamSpecString::builder("uid").build(),
                     ParamSpecString::builder("emoji").build(),
                     ParamSpecString::builder("color").build(),
-                    ParamSpecString::builder("name").build()
+                    ParamSpecString::builder("name").build(),
                 ]
             });
 
             PROPERTIES.as_ref()
         }
 
-        fn set_property(&self, _obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
+        fn set_property(
+            &self,
+            _obj: &Self::Type,
+            _id: usize,
+            value: &glib::Value,
+            pspec: &ParamSpec,
+        ) {
             match pspec.name() {
-                "uid" => self.inner.borrow_mut().id = Uuid::parse_str(value.get().unwrap()).unwrap(),
+                "uid" => {
+                    self.inner.borrow_mut().id = Uuid::parse_str(value.get().unwrap()).unwrap()
+                }
                 "emoji" => self.inner.borrow_mut().emoji = value.get().unwrap(),
                 "color" => {
                     let color = RGBA::parse(value.get().unwrap()).unwrap();
-                    self.inner.borrow_mut().color = vec![
-                        color.red(),
-                        color.green(),
-                        color.blue(),
-                        color.alpha()
-                    ];
+                    self.inner.borrow_mut().color =
+                        vec![color.red(), color.green(), color.blue(), color.alpha()];
                 }
                 "name" => self.inner.borrow_mut().name = value.get().unwrap(),
-                _ => unimplemented!()
+                _ => unimplemented!(),
             }
         }
 
@@ -85,7 +89,7 @@ mod imp {
                 "emoji" => self.inner.borrow().emoji.to_value(),
                 "color" => obj.rgba_color().to_str().to_value(),
                 "name" => self.inner.borrow().name.to_value(),
-                _ => unimplemented!()
+                _ => unimplemented!(),
             }
         }
 
@@ -95,13 +99,15 @@ mod imp {
                     Signal::builder(
                         "transaction-added",
                         &[Transaction::static_type().into()],
-                        <()>::static_type().into()
-                    ).build(),
+                        <()>::static_type().into(),
+                    )
+                    .build(),
                     Signal::builder(
                         "transaction-removed",
                         &[Transaction::static_type().into()],
-                        <()>::static_type().into()
-                    ).build()
+                        <()>::static_type().into(),
+                    )
+                    .build(),
                 ]
             });
             SIGNALS.as_ref()
@@ -126,7 +132,8 @@ impl Group {
             ("emoji", &emoji),
             ("color", &color.to_str()),
             ("name", &name),
-        ]).expect("Failed to create Group")
+        ])
+        .expect("Failed to create Group")
     }
 
     pub fn empty() -> Self {
@@ -142,27 +149,15 @@ impl Group {
         });
 
         factory.connect_bind(move |_, list_item| {
-            let group_row = list_item
-                .child()
-                .unwrap()
-                .downcast::<GroupRow>()
-                .unwrap();
+            let group_row = list_item.child().unwrap().downcast::<GroupRow>().unwrap();
 
-            let group_item = list_item
-                .item()
-                .unwrap()
-                .downcast::<Group>()
-                .unwrap();
+            let group_item = list_item.item().unwrap().downcast::<Group>().unwrap();
 
             group_row.bind(&group_item);
         });
 
         factory.connect_unbind(move |_, list_item| {
-            let group_row = list_item
-                .child()
-                .unwrap()
-                .downcast::<GroupRow>()
-                .unwrap();
+            let group_row = list_item.child().unwrap().downcast::<GroupRow>().unwrap();
 
             group_row.unbind();
         });
@@ -172,18 +167,19 @@ impl Group {
 
     pub fn search_expression() -> ClosureExpression {
         ClosureExpression::with_callback(gtk::Expression::NONE, |v| {
-            let group = v[0].get::<Group>()
-                .expect("Value is not a `Group`");
+            let group = v[0].get::<Group>().expect("Value is not a `Group`");
 
             group.name()
         })
     }
 
     pub fn load_from_file(path: &Path) -> Result<Self> {
-        let group: Self = glib::Object::new(&[])
-            .expect("Failed to create group");
+        let group: Self = glib::Object::new(&[]).expect("Failed to create group");
 
-        group.imp().inner.replace(imp::GroupInner::load_from_file(path)?);
+        group
+            .imp()
+            .inner
+            .replace(imp::GroupInner::load_from_file(path)?);
 
         Ok(group)
     }
@@ -221,12 +217,8 @@ impl Group {
     }
 
     pub fn set_color(&self, color: &RGBA) {
-        self.imp().inner.borrow_mut().color = vec![
-            color.red(),
-            color.green(),
-            color.blue(),
-            color.alpha()
-        ];
+        self.imp().inner.borrow_mut().color =
+            vec![color.red(), color.green(), color.blue(), color.alpha()];
     }
 
     pub fn set_emoji(&self, emoji: &str) {
@@ -238,15 +230,27 @@ impl Group {
             self.imp().inner.borrow().color[0],
             self.imp().inner.borrow().color[1],
             self.imp().inner.borrow().color[2],
-            self.imp().inner.borrow().color[3]
+            self.imp().inner.borrow().color[3],
         )
     }
 
     pub fn new_transaction(&self, transaction: Transaction) {
-        self.imp().inner.borrow().transactions.borrow_mut().push(transaction);
+        self.imp()
+            .inner
+            .borrow()
+            .transactions
+            .borrow_mut()
+            .push(transaction);
         self.emit_by_name::<()>(
             "transaction-added",
-            &[&self.imp().inner.borrow().transactions.borrow().last().unwrap()]
+            &[&self
+                .imp()
+                .inner
+                .borrow()
+                .transactions
+                .borrow()
+                .last()
+                .unwrap()],
         );
     }
 
@@ -261,7 +265,13 @@ impl Group {
             }
         }
 
-        let removed = self.imp().inner.borrow().transactions.borrow_mut().remove(idx);
+        let removed = self
+            .imp()
+            .inner
+            .borrow()
+            .transactions
+            .borrow_mut()
+            .remove(idx);
         self.emit_by_name::<()>("transaction-removed", &[&removed]);
     }
 
@@ -274,31 +284,40 @@ impl Group {
                 ls.append(&row);
             }
 
-            self.connect_closure("transaction-added", false, glib::closure_local!(move |group: Group, transaction: &Transaction| {
-                let row = TransactionRow::new(&transaction);
+            self.connect_closure(
+                "transaction-added",
+                false,
+                glib::closure_local!(move |group: Group, transaction: &Transaction| {
+                    let row = TransactionRow::new(&transaction);
 
-                let list_store = group.imp().transaction_list_store.get().unwrap();
-                list_store.append(&row);
-            }));
+                    let list_store = group.imp().transaction_list_store.get().unwrap();
+                    list_store.append(&row);
+                }),
+            );
 
-            self.connect_closure("transaction-removed", false, glib::closure_local!(move |group: Group, transaction: &Transaction| {
-                let list_store = group.imp().transaction_list_store.get().unwrap();
+            self.connect_closure(
+                "transaction-removed",
+                false,
+                glib::closure_local!(move |group: Group, transaction: &Transaction| {
+                    let list_store = group.imp().transaction_list_store.get().unwrap();
 
-                for i in 0..list_store.n_items() {
-                    let transaction_id = list_store.item(i)
-                        .expect(&format!("No item at position {}", i))
-                        .downcast_ref::<TransactionRow>()
-                        .expect("Item is not a TransactionRow")
-                        .transaction()
-                        .expect("No transaction set for TransactionRow")
-                        .id();
+                    for i in 0..list_store.n_items() {
+                        let transaction_id = list_store
+                            .item(i)
+                            .expect(&format!("No item at position {}", i))
+                            .downcast_ref::<TransactionRow>()
+                            .expect("Item is not a TransactionRow")
+                            .transaction()
+                            .expect("No transaction set for TransactionRow")
+                            .id();
 
-                    if transaction_id == transaction.id() {
-                        list_store.remove(i);
-                        break;
+                        if transaction_id == transaction.id() {
+                            list_store.remove(i);
+                            break;
+                        }
                     }
-                }
-            }));
+                }),
+            );
 
             ls
         })

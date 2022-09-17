@@ -1,10 +1,10 @@
+use glib::{ParamSpec, ParamSpecString};
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{glib, CompositeTemplate};
-use glib::{ParamSpec, ParamSpecString};
 
-use once_cell::sync::Lazy;
 use derivative::*;
+use once_cell::sync::Lazy;
 
 use std::cell::RefCell;
 
@@ -37,7 +37,7 @@ mod imp {
         #[template_child]
         pub minute_decrease: TemplateChild<gtk::Button>,
 
-        #[derivative(Default(value="RefCell::new(glib::DateTime::now_local().unwrap())"))]
+        #[derivative(Default(value = "RefCell::new(glib::DateTime::now_local().unwrap())"))]
         pub selected_date: RefCell<glib::DateTime>,
     }
 
@@ -59,20 +59,24 @@ mod imp {
 
     impl ObjectImpl for DateTimePicker {
         fn properties() -> &'static [glib::ParamSpec] {
-            static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![ParamSpecString::builder("selected-date").build()]
-            });
+            static PROPERTIES: Lazy<Vec<ParamSpec>> =
+                Lazy::new(|| vec![ParamSpecString::builder("selected-date").build()]);
 
             PROPERTIES.as_ref()
         }
 
-        fn set_property(&self, obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
+        fn set_property(
+            &self,
+            obj: &Self::Type,
+            _id: usize,
+            value: &glib::Value,
+            pspec: &ParamSpec,
+        ) {
             match pspec.name() {
                 "selected-date" => {
                     if let Ok(input) = value.get() {
                         self.selected_date.replace(
-                            glib::DateTime::from_iso8601(input, None)
-                                .expect("Invalid date")
+                            glib::DateTime::from_iso8601(input, None).expect("Invalid date"),
                         );
 
                         obj.update_date_entry_text();
@@ -80,15 +84,19 @@ mod imp {
                         obj.update_minute_entry();
                     }
                 }
-                _ => unimplemented!()
+                _ => unimplemented!(),
             }
         }
 
         fn property(&self, _obj: &Self::Type, _id: usize, pspec: &ParamSpec) -> glib::Value {
             match pspec.name() {
-                "selected-date" => self.selected_date.borrow().format_iso8601()
-                    .expect("Invalid date").to_value(),
-                _ => unimplemented!()
+                "selected-date" => self
+                    .selected_date
+                    .borrow()
+                    .format_iso8601()
+                    .expect("Invalid date")
+                    .to_value(),
+                _ => unimplemented!(),
             }
         }
 
@@ -135,7 +143,7 @@ impl DateTimePicker {
 
         match new_date {
             Ok(date) => _ = self.imp().selected_date.replace(date),
-            Err(_) => { }
+            Err(_) => {}
         }
 
         self.update_hour_entry();
@@ -147,7 +155,7 @@ impl DateTimePicker {
 
         match new_date {
             Ok(date) => _ = self.imp().selected_date.replace(date),
-            Err(_) => { }
+            Err(_) => {}
         }
 
         self.update_hour_entry();
@@ -159,7 +167,7 @@ impl DateTimePicker {
 
         match new_date {
             Ok(date) => _ = self.imp().selected_date.replace(date),
-            Err(_) => { }
+            Err(_) => {}
         }
 
         self.update_minute_entry();
@@ -171,7 +179,7 @@ impl DateTimePicker {
 
         match new_date {
             Ok(date) => _ = self.imp().selected_date.replace(date),
-            Err(_) => { }
+            Err(_) => {}
         }
 
         self.update_minute_entry();
@@ -190,8 +198,9 @@ impl DateTimePicker {
                 calendar.day(),
                 current_date.hour(),
                 current_date.minute(),
-                current_date.seconds()
-            ).unwrap();
+                current_date.seconds(),
+            )
+            .unwrap();
         }
 
         self.imp().selected_date.replace(new_date);
@@ -223,83 +232,89 @@ impl DateTimePicker {
 
     /// Update date and calendar popover when date entry changes
     fn connect_date_entry_changes(&self) {
-        self.imp().date_entry.connect_text_notify(glib::clone!(@weak self as parent => move |_| {
-            if let Some(date) = parent.parse_date() {
-                parent.imp().calendar.set_year(date.year());
-                parent.imp().calendar.set_month(date.month());
-                parent.imp().calendar.set_day(date.day_of_month());
+        self.imp()
+            .date_entry
+            .connect_text_notify(glib::clone!(@weak self as parent => move |_| {
+                if let Some(date) = parent.parse_date() {
+                    parent.imp().calendar.set_year(date.year());
+                    parent.imp().calendar.set_month(date.month());
+                    parent.imp().calendar.set_day(date.day_of_month());
 
-                let new_date: glib::DateTime = {
-                    let current_date = parent.imp().selected_date.borrow();
-                    glib::DateTime::new(
-                        &current_date.timezone(),
-                        date.year(),
-                        date.month(),
-                        date.day_of_month(),
-                        current_date.hour(),
-                        current_date.minute(),
-                        current_date.seconds()
-                    ).unwrap()
-                };
+                    let new_date: glib::DateTime = {
+                        let current_date = parent.imp().selected_date.borrow();
+                        glib::DateTime::new(
+                            &current_date.timezone(),
+                            date.year(),
+                            date.month(),
+                            date.day_of_month(),
+                            current_date.hour(),
+                            current_date.minute(),
+                            current_date.seconds()
+                        ).unwrap()
+                    };
 
-                parent.imp().selected_date.replace(new_date);
-                parent.imp().date_entry.remove_css_class("error");
-            } else {
-                parent.imp().date_entry.add_css_class("error");
-            }
-        }));
+                    parent.imp().selected_date.replace(new_date);
+                    parent.imp().date_entry.remove_css_class("error");
+                } else {
+                    parent.imp().date_entry.add_css_class("error");
+                }
+            }));
     }
 
     /// Update selected date when hour entry changes
     fn connect_hour_entry_changes(&self) {
-        self.imp().hour_value.connect_text_notify(glib::clone!(@weak self as parent => move |_| {
-            if let Ok(value) = parent.imp().hour_value.text().as_str().parse::<i32>() {
-                if let Ok(new_date) = {
-                    let current_date = parent.imp().selected_date.borrow();
-                    glib::DateTime::new(
-                        &current_date.timezone(),
-                        current_date.year(),
-                        current_date.month(),
-                        current_date.day_of_month(),
-                        value,
-                        current_date.minute(),
-                        current_date.seconds()
-                    )
-                } {
-                    parent.imp().selected_date.replace(new_date);
-                    parent.imp().hour_value.remove_css_class("error");
+        self.imp()
+            .hour_value
+            .connect_text_notify(glib::clone!(@weak self as parent => move |_| {
+                if let Ok(value) = parent.imp().hour_value.text().as_str().parse::<i32>() {
+                    if let Ok(new_date) = {
+                        let current_date = parent.imp().selected_date.borrow();
+                        glib::DateTime::new(
+                            &current_date.timezone(),
+                            current_date.year(),
+                            current_date.month(),
+                            current_date.day_of_month(),
+                            value,
+                            current_date.minute(),
+                            current_date.seconds()
+                        )
+                    } {
+                        parent.imp().selected_date.replace(new_date);
+                        parent.imp().hour_value.remove_css_class("error");
+                    }
+                    else {
+                        parent.imp().hour_value.add_css_class("error")
+                    }
                 }
-                else {
-                    parent.imp().hour_value.add_css_class("error")
-                }
-            }
-        }));
+            }));
     }
 
     /// Update selected date when minute entry changes
     fn connect_minute_entry_changes(&self) {
-        self.imp().minute_value.connect_text_notify(glib::clone!(@weak self as parent => move |_| {
-            if let Ok(value) = parent.imp().minute_value.text().as_str().parse::<i32>() {
-                if let Ok(new_date) = {
-                    let current_date = parent.imp().selected_date.borrow();
-                    glib::DateTime::new(
-                        &current_date.timezone(),
-                        current_date.year(),
-                        current_date.month(),
-                        current_date.day_of_month(),
-                        current_date.hour(),
-                        value,
-                        current_date.seconds()
-                    )
-                } {
-                    parent.imp().selected_date.replace(new_date);
-                    parent.imp().minute_value.remove_css_class("error");
+        self.imp().minute_value.connect_text_notify(
+            glib::clone!(@weak self as parent => move |_| {
+                if let Ok(value) = parent.imp().minute_value.text().as_str().parse::<i32>() {
+                    if let Ok(new_date) = {
+                        let current_date = parent.imp().selected_date.borrow();
+                        glib::DateTime::new(
+                            &current_date.timezone(),
+                            current_date.year(),
+                            current_date.month(),
+                            current_date.day_of_month(),
+                            current_date.hour(),
+                            value,
+                            current_date.seconds()
+                        )
+                    } {
+                        parent.imp().selected_date.replace(new_date);
+                        parent.imp().minute_value.remove_css_class("error");
+                    }
+                    else {
+                        parent.imp().minute_value.add_css_class("error")
+                    }
                 }
-                else {
-                    parent.imp().minute_value.add_css_class("error")
-                }
-            }
-        }));
+            }),
+        );
     }
 
     /// `GLib::Date set_parse` wasn't working so I made my own unsafe binding to
@@ -307,7 +322,7 @@ impl DateTimePicker {
     fn parse_date(&self) -> Option<glib::DateTime> {
         let mut parsed_date = glib::ffi::GDate {
             julian_days: 100,
-            flags_dmy: 0
+            flags_dmy: 0,
         };
 
         unsafe {
@@ -317,12 +332,17 @@ impl DateTimePicker {
             glib::ffi::g_date_set_parse(&mut parsed_date, entry_text);
 
             if glib::ffi::g_date_valid(&parsed_date) != 0 {
-                Some(glib::DateTime::from_local(
-                    glib::ffi::g_date_get_year(&parsed_date).into(),
-                    glib::ffi::g_date_get_month(&parsed_date).into(),
-                    glib::ffi::g_date_get_day(&parsed_date).into(),
-                    0, 0, 0.0
-                ).unwrap())
+                Some(
+                    glib::DateTime::from_local(
+                        glib::ffi::g_date_get_year(&parsed_date).into(),
+                        glib::ffi::g_date_get_month(&parsed_date).into(),
+                        glib::ffi::g_date_get_day(&parsed_date).into(),
+                        0,
+                        0,
+                        0.0,
+                    )
+                    .unwrap(),
+                )
             } else {
                 None
             }

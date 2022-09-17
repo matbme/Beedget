@@ -1,7 +1,7 @@
+use glib::{ParamFlags, ParamSpec, ParamSpecObject};
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gio, glib, CompositeTemplate};
-use glib::{ParamFlags, ParamSpec, ParamSpecObject};
 
 use adw::prelude::*;
 use adw::subclass::prelude::*;
@@ -28,7 +28,7 @@ mod imp {
 
         pub transaction: OnceCell<Transaction>,
 
-        pub bindings: RefCell<Vec<glib::Binding>>
+        pub bindings: RefCell<Vec<glib::Binding>>,
     }
 
     #[glib::object_subclass]
@@ -52,22 +52,29 @@ mod imp {
                 vec![
                     ParamSpecObject::builder("transaction", Transaction::static_type())
                         .flags(ParamFlags::CONSTRUCT | ParamFlags::READWRITE)
-                        .build()
+                        .build(),
                 ]
             });
 
             PROPERTIES.as_ref()
         }
 
-        fn set_property(&self, _obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
+        fn set_property(
+            &self,
+            _obj: &Self::Type,
+            _id: usize,
+            value: &glib::Value,
+            pspec: &ParamSpec,
+        ) {
             match pspec.name() {
                 "transaction" => {
                     if let Ok(input) = value.get::<Transaction>() {
-                        self.transaction.set(input)
+                        self.transaction
+                            .set(input)
                             .expect("Transaction pointer was already set!");
                     }
                 }
-                _ => unimplemented!()
+                _ => unimplemented!(),
             }
         }
 
@@ -75,7 +82,10 @@ mod imp {
             self.parent_constructed(obj);
 
             let mut bindings = obj.imp().bindings.borrow_mut();
-            let transaction = obj.imp().transaction.get()
+            let transaction = obj
+                .imp()
+                .transaction
+                .get()
                 .expect("No transaction assigned to row");
 
             // Bind transaction amount to label
@@ -84,7 +94,9 @@ mod imp {
                 .transform_to(|_, value| {
                     if let Ok(amount) = value.get::<f32>() {
                         Some(format!("{:.2}", amount.abs()).to_value())
-                    } else { None }
+                    } else {
+                        None
+                    }
                 })
                 .flags(glib::BindingFlags::SYNC_CREATE)
                 .build();
@@ -95,7 +107,7 @@ mod imp {
                 Some("tr-type"),
                 glib::clone!(@weak obj as parent => move |transaction, _| {
                     parent.apply_css(transaction.tr_type());
-                })
+                }),
             );
 
             // Bind transaction name to title
@@ -110,7 +122,7 @@ mod imp {
                 Some("date"),
                 glib::clone!(@weak obj as parent => move |transaction, _| {
                     parent.set_subtitle(&transaction.relative_date());
-                })
+                }),
             );
 
             obj.apply_css(transaction.tr_type());
@@ -134,9 +146,8 @@ glib::wrapper! {
 
 impl TransactionRow {
     pub fn new(transaction: &Transaction) -> Self {
-        glib::Object::new(&[
-            ("transaction", &transaction),
-        ]).expect("Failed to create `TransactionRow`.")
+        glib::Object::new(&[("transaction", &transaction)])
+            .expect("Failed to create `TransactionRow`.")
     }
 
     pub fn transaction(&self) -> Option<&Transaction> {
@@ -186,7 +197,7 @@ impl TransactionRow {
 
         match tr_type {
             TransactionType::EXPENSE => self.imp().amount_label.add_css_class("expense"),
-            TransactionType::INCOME => self.imp().amount_label.add_css_class("income")
+            TransactionType::INCOME => self.imp().amount_label.add_css_class("income"),
         }
     }
 }

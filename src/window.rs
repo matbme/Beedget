@@ -6,10 +6,10 @@ use gtk::{gio, glib, CompositeTemplate};
 use adw::prelude::BinExt;
 use adw::subclass::application_window::AdwApplicationWindowImpl;
 
+use crate::application;
+use crate::dialogs::*;
 use crate::models::*;
 use crate::widgets::*;
-use crate::dialogs::*;
-use crate::application;
 
 mod imp {
     use super::*;
@@ -33,7 +33,7 @@ mod imp {
         pub content_pane: TemplateChild<gtk::Box>,
 
         #[template_child]
-        pub content: TemplateChild<adw::Bin>
+        pub content: TemplateChild<adw::Bin>,
     }
 
     #[glib::object_subclass]
@@ -81,19 +81,25 @@ glib::wrapper! {
 #[gtk::template_callbacks]
 impl BeedgetWindow {
     pub fn new<P: glib::IsA<gtk::Application>>(application: &P) -> Self {
-        glib::Object::new(&[("application", application)])
-            .expect("Failed to create BeedgetWindow")
+        glib::Object::new(&[("application", application)]).expect("Failed to create BeedgetWindow")
     }
 
     #[template_callback]
     fn filter_group_list(&self, entry: &gtk::SearchEntry) {
-        self.imp().sidebar
-            .model().unwrap()
-            .downcast_ref::<gtk::SingleSelection>().unwrap()
-            .model().unwrap()
-            .downcast_ref::<gtk::FilterListModel>().unwrap()
-            .filter().unwrap()
-            .downcast_ref::<gtk::StringFilter>().unwrap()
+        self.imp()
+            .sidebar
+            .model()
+            .unwrap()
+            .downcast_ref::<gtk::SingleSelection>()
+            .unwrap()
+            .model()
+            .unwrap()
+            .downcast_ref::<gtk::FilterListModel>()
+            .unwrap()
+            .filter()
+            .unwrap()
+            .downcast_ref::<gtk::StringFilter>()
+            .unwrap()
             .set_search(Some(&entry.text()));
     }
 
@@ -115,7 +121,8 @@ impl BeedgetWindow {
         }));
         self.add_action(&open_group_dialog_action);
 
-        let open_transaction_dialog_action = gio::SimpleAction::new("open-transaction-dialog", None);
+        let open_transaction_dialog_action =
+            gio::SimpleAction::new("open-transaction-dialog", None);
         open_transaction_dialog_action.connect_activate(clone!(@weak self as win => move |_, _| {
             win.open_transaction_dialog();
         }));
@@ -140,18 +147,23 @@ impl BeedgetWindow {
         self.imp().sidebar.set_factory(Some(&Group::factory()));
 
         // Fill content with element selected by default
-        self.set_content_page(&self.imp().sidebar.model().unwrap()
-            .downcast_ref::<gtk::SingleSelection>().unwrap());
+        self.set_content_page(
+            &self
+                .imp()
+                .sidebar
+                .model()
+                .unwrap()
+                .downcast_ref::<gtk::SingleSelection>()
+                .unwrap(),
+        );
     }
 
     /// Creates content page for selected group
     fn set_content_page(&self, model: &gtk::SingleSelection) {
         if model.selected() != gtk::INVALID_LIST_POSITION {
             let filtered_model = model.model().unwrap();
-            let selected_object = filtered_model
-                .item(model.selected()).unwrap();
-            let selected_group = selected_object
-                .downcast_ref::<Group>().unwrap();
+            let selected_object = filtered_model.item(model.selected()).unwrap();
+            let selected_group = selected_object.downcast_ref::<Group>().unwrap();
 
             let content_page = GroupContent::new(&selected_group);
             self.imp().content.set_child(Some(&content_page));

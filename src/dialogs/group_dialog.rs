@@ -1,10 +1,10 @@
 use std::cell::RefCell;
 
+use glib::{ParamFlags, ParamSpec, ParamSpecObject};
+use gtk::gdk::RGBA;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
 use gtk::{gdk, glib, CompositeTemplate};
-use glib::{ParamFlags, ParamSpec, ParamSpecObject};
-use gtk::gdk::RGBA;
 
 use once_cell::sync::{Lazy, OnceCell};
 
@@ -13,8 +13,8 @@ use adw::subclass::window::AdwWindowImpl;
 use emojis;
 use rand::prelude::*;
 
-use crate::models::*;
 use crate::application;
+use crate::models::*;
 
 mod imp {
     use super::*;
@@ -38,7 +38,7 @@ mod imp {
         pub group_icon_picker_button: TemplateChild<gtk::Button>,
 
         pub current_emoji: RefCell<String>,
-        pub edit_group: OnceCell<Group>
+        pub edit_group: OnceCell<Group>,
     }
 
     #[glib::object_subclass]
@@ -60,27 +60,31 @@ mod imp {
     impl ObjectImpl for GroupDialog {
         fn properties() -> &'static [ParamSpec] {
             static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-                vec![
-                    ParamSpecObject::builder("group", Group::static_type())
-                        .flags(ParamFlags::CONSTRUCT | ParamFlags::READWRITE)
-                        .build()
-                ]
+                vec![ParamSpecObject::builder("group", Group::static_type())
+                    .flags(ParamFlags::CONSTRUCT | ParamFlags::READWRITE)
+                    .build()]
             });
 
             PROPERTIES.as_ref()
         }
 
-        fn set_property(&self, obj: &Self::Type, _id: usize, value: &glib::Value, pspec: &ParamSpec) {
+        fn set_property(
+            &self,
+            obj: &Self::Type,
+            _id: usize,
+            value: &glib::Value,
+            pspec: &ParamSpec,
+        ) {
             match pspec.name() {
                 "group" => {
                     if let Ok(input) = value.get::<Group>() {
                         match self.edit_group.set(input) {
                             Ok(_) => obj.populate_group_values(),
-                            Err(_) => panic!("Group pointer was already set!")
+                            Err(_) => panic!("Group pointer was already set!"),
                         }
                     }
                 }
-                _ => unimplemented!()
+                _ => unimplemented!(),
             }
         }
 
@@ -90,11 +94,13 @@ mod imp {
             if obj.imp().edit_group.get().is_none() {
                 // Random color
                 let mut rng = rand::thread_rng();
-                self.group_color.set_rgba(&RGBA::new(rng.gen(), rng.gen(), rng.gen(), 1.0));
+                self.group_color
+                    .set_rgba(&RGBA::new(rng.gen(), rng.gen(), rng.gen(), 1.0));
 
                 // Random emoji
                 let random_emoji = emojis::iter().choose(&mut rng).unwrap();
-                self.group_icon_picker_button.set_label(random_emoji.as_str());
+                self.group_icon_picker_button
+                    .set_label(random_emoji.as_str());
                 *obj.imp().current_emoji.borrow_mut() = random_emoji.to_string();
             }
 
@@ -118,16 +124,13 @@ glib::wrapper! {
 #[gtk::template_callbacks]
 impl GroupDialog {
     pub fn new(parent: &gtk::Window) -> Self {
-        glib::Object::new(&[
-            ("transient-for", &Some(parent))
-        ]).expect("Failed to create `GroupDialog`.")
+        glib::Object::new(&[("transient-for", &Some(parent))])
+            .expect("Failed to create `GroupDialog`.")
     }
 
     pub fn edit(parent: &gtk::Window, edit_group: &Group) -> Self {
-        glib::Object::new(&[
-            ("transient-for", &Some(parent)),
-            ("group", &edit_group)
-        ]).expect("Failed to create `GroupDialog`")
+        glib::Object::new(&[("transient-for", &Some(parent)), ("group", &edit_group)])
+            .expect("Failed to create `GroupDialog`")
     }
 
     #[template_callback]
@@ -148,13 +151,17 @@ impl GroupDialog {
         let group = Group::new(
             &self.imp().current_emoji.borrow(),
             self.imp().group_color.rgba(),
-            &self.imp().group_name.text()
+            &self.imp().group_name.text(),
         );
 
         let application = application!(self @as crate::BeedgetApplication);
         match application.data().new_group(group) {
-            Ok(()) => { self.destroy(); }
-            Err(error) => { panic!("{}", error); }
+            Ok(()) => {
+                self.destroy();
+            }
+            Err(error) => {
+                panic!("{}", error);
+            }
         }
     }
 
@@ -167,11 +174,16 @@ impl GroupDialog {
         let color_str = self.imp().group_color.rgba().to_str();
         group.set_property("color", color_str.to_value());
 
-        let emoji = self.imp().group_icon_picker_button.label()
+        let emoji = self
+            .imp()
+            .group_icon_picker_button
+            .label()
             .expect("No group emoji selected");
         group.set_property("emoji", emoji.to_value());
 
-        application!(self @as crate::BeedgetApplication).data().save_group(group);
+        application!(self @as crate::BeedgetApplication)
+            .data()
+            .save_group(group);
 
         self.destroy();
     }
@@ -180,10 +192,18 @@ impl GroupDialog {
     fn present_group_icon_picker(&self) {
         let mut current_emoji = self.imp().current_emoji.borrow_mut();
         current_emoji.clear();
-        current_emoji.push_str(self.imp().group_icon_picker_button.label().unwrap().as_str());
+        current_emoji.push_str(
+            self.imp()
+                .group_icon_picker_button
+                .label()
+                .unwrap()
+                .as_str(),
+        );
 
         let emoji_picker = gtk::EmojiChooser::new();
-        self.imp().group_icon_picker_button.set_child(Some(&emoji_picker));
+        self.imp()
+            .group_icon_picker_button
+            .set_child(Some(&emoji_picker));
 
         emoji_picker.connect_emoji_picked(glib::clone!(@weak self as parent => move |_, text| {
             if !text.is_empty() {
@@ -202,39 +222,51 @@ impl GroupDialog {
     /// Disables button if name entry is empty
     fn connect_add_button_to_entry_size(&self) {
         // Set initial
-        self.imp().add_button.set_sensitive(self.imp().group_name.text_length() > 0);
+        self.imp()
+            .add_button
+            .set_sensitive(self.imp().group_name.text_length() > 0);
 
         // Subscribe to changes
-        self.imp().group_name.buffer().connect_length_notify(glib::clone!(@weak self as parent => move |_| {
-            parent.imp().add_button.set_sensitive(parent.imp().group_name.text_length() > 0);
-        }));
+        self.imp().group_name.buffer().connect_length_notify(
+            glib::clone!(@weak self as parent => move |_| {
+                parent.imp().add_button.set_sensitive(parent.imp().group_name.text_length() > 0);
+            }),
+        );
     }
 
     /// Handle keyboard events
     fn connect_key_event_controller(&self) {
         let key_controller = gtk::EventControllerKey::new();
-        key_controller.connect_key_pressed(glib::clone!(@strong self as parent => move |_, keyval, _, _| {
-            match keyval {
-                gdk::Key::Escape => { // Esc closes dialog
-                    parent.destroy();
-                    gtk::Inhibit(true)
+        key_controller.connect_key_pressed(
+            glib::clone!(@strong self as parent => move |_, keyval, _, _| {
+                match keyval {
+                    gdk::Key::Escape => { // Esc closes dialog
+                        parent.destroy();
+                        gtk::Inhibit(true)
+                    }
+                    _ => { gtk::Inhibit(false) }
                 }
-                _ => { gtk::Inhibit(false) }
-            }
-        }));
+            }),
+        );
 
         self.add_controller(&key_controller);
     }
 
     /// Fill entries with group values for edit
     fn populate_group_values(&self) {
-        let group = self.imp().edit_group.get().expect("Group is not initialized");
+        let group = self
+            .imp()
+            .edit_group
+            .get()
+            .expect("Group is not initialized");
 
-        self.imp().group_name.set_buffer(&gtk::EntryBuffer::new(
-            Some(&group.name())
-        ));
+        self.imp()
+            .group_name
+            .set_buffer(&gtk::EntryBuffer::new(Some(&group.name())));
 
         self.imp().group_color.set_rgba(&group.rgba_color());
-        self.imp().group_icon_picker_button.set_label(&group.emoji());
+        self.imp()
+            .group_icon_picker_button
+            .set_label(&group.emoji());
     }
 }
