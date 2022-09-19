@@ -138,12 +138,12 @@ impl BeedgetWindow {
         let filter_model = gtk::FilterListModel::new(Some(model), Some(&filter));
         let selection_model = gtk::SingleSelection::new(Some(&filter_model));
 
+        selection_model.set_autoselect(false);
         selection_model.connect_selected_notify(clone!(@weak self as win => move |model| {
             win.set_content_page(model);
         }));
 
         self.imp().sidebar.set_model(Some(&selection_model));
-
         self.imp().sidebar.set_factory(Some(&Group::factory()));
 
         // Fill content with element selected by default
