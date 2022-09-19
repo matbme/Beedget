@@ -50,6 +50,7 @@ mod imp {
             obj.setup_gactions();
             obj.load_css();
             obj.set_accels_for_action("app.quit", &["<primary>q"]);
+            obj.set_accels_for_action("win.start-group-search", &["<Ctrl>f"]);
 
             obj.connect_closure(
                 "save-group",

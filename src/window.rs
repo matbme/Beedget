@@ -127,6 +127,13 @@ impl BeedgetWindow {
             win.open_transaction_dialog();
         }));
         self.add_action(&open_transaction_dialog_action);
+
+        let start_group_search_action = gio::SimpleAction::new("start-group-search", None);
+        start_group_search_action.connect_activate(clone!(@weak self as win => move |_, _| {
+            let search_mode = win.imp().search_bar.is_search_mode();
+            win.imp().search_bar.set_search_mode(!search_mode);
+        }));
+        self.add_action(&start_group_search_action);
     }
 
     /// Initialize sidebar with groups from application data
