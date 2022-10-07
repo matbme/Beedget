@@ -140,6 +140,15 @@ impl TransactionDialog {
             .expect("Failed to create `TransactionDialog`.")
     }
 
+    pub fn new_with_preselected_group(parent: &gtk::Window, group: &Group) -> Self {
+        let td: Self = glib::Object::new(&[("transient-for", &Some(parent))])
+            .expect("Failed to create `TransactionDialog`.");
+
+        td.set_group_dropdown_selection(group);
+
+        td
+    }
+
     pub fn edit(parent: &gtk::Window, edit_transaction: &Transaction, group: &Group) -> Self {
         glib::Object::new(&[
             ("transient-for", &Some(parent)),
@@ -369,6 +378,11 @@ impl TransactionDialog {
             self.populate_group_select_dropdown();
         }
 
+        self.set_group_dropdown_selection(self.imp().current_group.get().unwrap())
+    }
+
+    #[inline(always)]
+    fn set_group_dropdown_selection(&self, selection: &Group) {
         let group_idx = self
             .imp()
             .group_select
@@ -376,7 +390,7 @@ impl TransactionDialog {
             .unwrap()
             .downcast_ref::<ListStore>()
             .unwrap()
-            .find(self.imp().current_group.get().unwrap())
+            .find(selection)
             .unwrap();
 
         self.imp().group_select.set_selected(group_idx);

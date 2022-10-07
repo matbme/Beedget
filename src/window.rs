@@ -105,7 +105,13 @@ impl BeedgetWindow {
 
     #[template_callback]
     fn open_transaction_dialog(&self) {
-        let dialog = TransactionDialog::new(self.upcast_ref());
+        let dialog = match self.imp().content.child() {
+            Some(content) => TransactionDialog::new_with_preselected_group(
+                self.upcast_ref(),
+                content.downcast_ref::<GroupContent>().unwrap().group(),
+            ),
+            None => TransactionDialog::new(self.upcast_ref()),
+        };
         dialog.present();
     }
 

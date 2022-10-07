@@ -96,4 +96,11 @@ impl GroupContent {
                 row.upcast::<gtk::Widget>()
             });
     }
+
+    pub fn group(&self) -> &Group {
+        self.imp()
+            .group
+            .get()
+            .expect("No Group set for GroupConntent")
+    }
 }
