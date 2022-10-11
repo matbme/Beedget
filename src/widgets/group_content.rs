@@ -17,6 +17,12 @@ mod imp {
         #[template_child]
         pub transaction_history: TemplateChild<gtk::ListBox>,
 
+        #[template_child]
+        pub monthly_expenses: TemplateChild<cards::MonthlyExpenses>,
+
+        #[template_child]
+        pub previous_months: TemplateChild<cards::PreviousMonths>,
+
         pub group: OnceCell<Group>,
     }
 

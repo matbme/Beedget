@@ -42,6 +42,8 @@ endif
 
 blueprints = custom_target('blueprints',
   input: files(
+    'ui/cards/monthly-expenses.blp',
+    'ui/cards/previous-months.blp',
     'ui/date-time-picker.blp',
     'ui/group-content.blp',
     'ui/group-dialog.blp',

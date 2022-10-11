@@ -1,8 +1,9 @@
-use anyhow::Result;
+use anyhow::{Error, Result};
+use gtk::glib::value::{FromValue, GenericValueTypeChecker, ToValue, ValueTypeChecker};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use glib::{subclass::Signal, ParamSpec, ParamSpecString};
+use glib::{subclass::Signal, ParamSpec, ParamSpecFloat, ParamSpecString};
 use gtk::gdk::RGBA;
 use gtk::prelude::*;
 use gtk::subclass::prelude::*;
@@ -16,6 +17,58 @@ use std::path::Path;
 use crate::models::*;
 use crate::widgets::*;
 
+// Cannot have Option<f32> as ParamSpecEnum, so we make our own optional value
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub enum Budget {
+    Some(f32),
+    None,
+}
+
+impl Budget {
+    pub fn get_value(&self) -> Result<&f32> {
+        match self {
+            Budget::Some(val) => Ok(val),
+            Budget::None => Err(Error::msg("Budget instance does not contain a value")),
+        }
+    }
+}
+
+impl Default for Budget {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
+impl ToValue for Budget {
+    fn to_value(&self) -> glib::Value {
+        match self {
+            Self::Some(val) => val.to_value(),
+            Self::None => (-1.0f32).to_value(),
+        }
+    }
+
+    fn value_type(&self) -> glib::Type {
+        std::primitive::f32::static_type()
+    }
+}
+
+unsafe impl<'a> FromValue<'a> for Budget {
+    type Checker = GenericValueTypeChecker<f32>;
+
+    unsafe fn from_value(value: &'a glib::Value) -> Self {
+        match <<f32 as FromValue<'a>>::Checker as ValueTypeChecker>::check(value) {
+            Ok(()) => {
+                if f32::from_value(value) == -1.0f32 {
+                    return Self::None;
+                } else {
+                    return Self::Some(f32::from_value(value));
+                }
+            }
+            Err(e) => panic!("Failed to convert Value to Budget type: {}", e),
+        }
+    }
+}
+
 mod imp {
     use super::*;
 
@@ -26,6 +79,7 @@ mod imp {
         pub emoji: String,
         pub color: Vec<f32>,
         pub transactions: RefCell<Vec<Transaction>>,
+        pub budget: Budget,
     }
 
     impl DataObject for GroupInner {
@@ -55,6 +109,7 @@ mod imp {
                     ParamSpecString::builder("emoji").build(),
                     ParamSpecString::builder("color").build(),
                     ParamSpecString::builder("name").build(),
+                    ParamSpecFloat::builder("budget").build(),
                 ]
             });
 
@@ -79,6 +134,7 @@ mod imp {
                         vec![color.red(), color.green(), color.blue(), color.alpha()];
                 }
                 "name" => self.inner.borrow_mut().name = value.get().unwrap(),
+                "budget" => self.inner.borrow_mut().budget = value.get().unwrap(),
                 _ => unimplemented!(),
             }
         }
@@ -89,6 +145,7 @@ mod imp {
                 "emoji" => self.inner.borrow().emoji.to_value(),
                 "color" => obj.rgba_color().to_str().to_value(),
                 "name" => self.inner.borrow().name.to_value(),
+                "budget" => self.inner.borrow().budget.to_value(),
                 _ => unimplemented!(),
             }
         }
@@ -126,12 +183,13 @@ impl Default for Group {
 }
 
 impl Group {
-    pub fn new(emoji: &str, color: RGBA, name: &str) -> Self {
+    pub fn new(emoji: &str, color: RGBA, name: &str, budget: Budget) -> Self {
         glib::Object::new(&[
             ("uid", &Uuid::new_v4().to_string()),
             ("emoji", &emoji),
             ("color", &color.to_str()),
             ("name", &name),
+            ("budget", &budget),
         ])
         .expect("Failed to create Group")
     }
@@ -212,6 +270,10 @@ impl Group {
         self.rgba_color().to_str().to_string()
     }
 
+    pub fn budget(&self) -> Budget {
+        self.imp().inner.borrow().budget.clone()
+    }
+
     pub fn set_name(&self, name: &str) {
         self.imp().inner.borrow_mut().name = name.to_string();
     }
@@ -223,6 +285,10 @@ impl Group {
 
     pub fn set_emoji(&self, emoji: &str) {
         self.imp().inner.borrow_mut().emoji = emoji.to_string();
+    }
+
+    pub fn set_budget(&self, budget: &Budget) {
+        self.imp().inner.borrow_mut().budget = budget.clone();
     }
 
     pub fn rgba_color(&self) -> RGBA {

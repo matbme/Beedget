@@ -10,6 +10,17 @@ template GroupContent: Box {
   margin-start: 10;
   margin-end: 10;
 
+  Adw.Carousel insights {
+    spacing: 10;
+
+    .MonthlyExpenses monthly_expenses {}
+    .PreviousMonths previous_months {}
+  }
+
+  Adw.CarouselIndicatorDots {
+    carousel: insights;
+  }
+
   Label {
     styles ["heading"]
     label: _("Transaction history");

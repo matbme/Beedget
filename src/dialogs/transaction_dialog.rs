@@ -279,19 +279,19 @@ impl TransactionDialog {
         // Subscribe to changes
         self.imp().transaction_name.buffer().connect_length_notify(
             glib::clone!(@weak self as parent => move |_| {
-                    parent.imp().add_button.set_sensitive(
-                        parent.imp().transaction_name.text_length() > 0 &&
-                        parent.amount_entry_value().is_some()
-                    );
+                parent.imp().add_button.set_sensitive(
+                    parent.imp().transaction_name.text_length() > 0 &&
+                    parent.amount_entry_value().is_some()
+                );
             }),
         );
 
         self.imp().amount_entry.buffer().connect_text_notify(
             glib::clone!(@weak self as parent => move |_| {
-                    parent.imp().add_button.set_sensitive(
-                        parent.amount_entry_value().is_some() &&
-                        parent.imp().transaction_name.text_length() > 0
-                    );
+                parent.imp().add_button.set_sensitive(
+                    parent.amount_entry_value().is_some() &&
+                    parent.imp().transaction_name.text_length() > 0
+                );
             }),
         );
     }

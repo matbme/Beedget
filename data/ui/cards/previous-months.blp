@@ -1,0 +1,114 @@
+using Gtk 4.0;
+using Adw 1;
+
+template PreviousMonths: Box {
+  styles ["card"]
+  margin-top: 5;
+  margin-bottom: 5;
+  orientation: vertical;
+
+  Label {
+    styles ["heading"]
+    justify: center;
+    margin-top: 5;
+    margin-bottom: 15;
+    label: _("Previous months");
+  }
+
+  Box {
+    hexpand: true;
+    halign: center;
+    margin-start: 10;
+    margin-end: 10;
+    margin-bottom: 10;
+
+    Box {
+      spacing: 10;
+      margin-top: 5;
+      margin-bottom:5;
+      margin-start: 10;
+      margin-end: 15;
+      orientation: vertical;
+
+      Box {
+        spacing: 3;
+        homogeneous: true;
+
+        Label {
+          label: "Sep.";
+        }
+
+        Label {
+          styles ["success"]
+          label: "$ 320.00";
+        }
+      }
+
+      Box {
+        spacing: 3;
+        homogeneous: true;
+
+        Label {
+          label: "Aug.";
+        }
+
+        Label {
+          styles ["error"]
+          label: "$ 710.00";
+        }
+      }
+
+      Box {
+        spacing: 3;
+        homogeneous: true;
+
+        Label {
+          label: "Jul.";
+        }
+
+        Label {
+          styles ["success"]
+          label: "$ 180.00";
+        }
+      }
+
+      Box {
+        spacing: 3;
+        homogeneous: true;
+
+        Label {
+          label: "Jun.";
+        }
+
+        Label {
+          styles ["error"]
+          label: "$ 550.00";
+        }
+      }
+    }
+
+    Separator {
+      margin-top: 5;
+      margin-bottom:5;
+    }
+
+    Box {
+      spacing: 10;
+      margin-top: 5;
+      margin-bottom:5;
+      margin-start: 10;
+      margin-end: 15;
+      orientation: vertical;
+      valign: center;
+
+      Label {
+        label: _("Average expense:");
+      }
+
+      Label {
+        styles ["title-3", "success"]
+        label: "$440.00";
+      }
+    }
+  }
+}

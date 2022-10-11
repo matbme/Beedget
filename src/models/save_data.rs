@@ -27,8 +27,8 @@ impl SaveData {
                 save_path: pb.to_owned(),
                 group_model: OnceCell::new(),
             },
-            Err(_) => {
-                panic!("Could not access save data directory");
+            Err(e) => {
+                panic!("Error loading save data: {}", e);
             }
         }
     }

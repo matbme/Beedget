@@ -4,6 +4,7 @@ using Adw 1;
 template GroupDialog : Adw.Window {
   modal: true;
   default-width: 400;
+  resizable: false;
 
   Box {
     orientation: vertical;
@@ -50,6 +51,32 @@ template GroupDialog : Adw.Window {
         hexpand: true;
         secondary-icon-name: "document-edit-symbolic";
         placeholder-text: _("Name");
+      }
+
+      Box {
+        Box {
+          styles ["linked"]
+
+          Entry group_budget {
+            input-purpose: digits;
+            primary-icon-name: "money-symbolic";
+            placeholder-text: _("50.00");
+          }
+
+          Button decrease_budget_button {
+            icon-name: "list-remove-symbolic";
+            clicked => decrease_budget() swapped;
+          }
+
+          Button increase_budget_button {
+            icon-name: "list-add-symbolic";
+            clicked => increase_budget() swapped;
+          }
+        }
+
+        CheckButton no_budget_check {
+          label: _("No budget");
+        }
       }
 
       Label {

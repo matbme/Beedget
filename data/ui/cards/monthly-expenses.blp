@@ -1,0 +1,82 @@
+using Gtk 4.0;
+using Adw 1;
+
+template MonthlyExpenses: Box {
+  styles ["card"]
+  margin-top: 5;
+  margin-bottom: 5;
+  orientation: vertical;
+
+  Label {
+    styles ["heading"]
+    justify: center;
+    margin-top: 5;
+    margin-bottom: 15;
+    label: _("Monthly expenses");
+  }
+
+  Box {
+    hexpand: true;
+    halign: center;
+    margin-start: 10;
+    margin-end: 10;
+    margin-bottom: 10;
+
+    Box {
+      spacing: 10;
+      margin-top: 5;
+      margin-bottom:5;
+      margin-start: 10;
+      margin-end: 15;
+      orientation: vertical;
+
+      Label {
+        label: _("You spent");
+      }
+
+      Label {
+        styles ["title-3"]
+        label: "$120.00";
+      }
+
+      Label {
+        label: _("this month.");
+      }
+    }
+
+    Separator {
+      margin-top: 5;
+      margin-bottom:5;
+    }
+
+    Box {
+      spacing: 10;
+      margin-top: 5;
+      margin-bottom: 5;
+      margin-start: 15;
+      margin-end: 10;
+      orientation: vertical;
+
+      Label {
+        label: _("Which is");
+      }
+
+      Label {
+        styles ["title-3", "success"]
+        label: "$310.00";
+      }
+
+      Box {
+        Label {
+          styles ["success", "heading"]
+          margin-end: 3;
+          label: _("under");
+        }
+
+        Label {
+          label: _("your budget.");
+        }
+      }
+    }
+  }
+}

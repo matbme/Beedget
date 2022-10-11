@@ -32,12 +32,25 @@ mod imp {
         pub group_name: TemplateChild<gtk::Entry>,
 
         #[template_child]
+        pub group_budget: TemplateChild<gtk::Entry>,
+
+        #[template_child]
+        pub decrease_budget_button: TemplateChild<gtk::Button>,
+
+        #[template_child]
+        pub increase_budget_button: TemplateChild<gtk::Button>,
+
+        #[template_child]
         pub group_color: TemplateChild<gtk::ColorButton>,
+
+        #[template_child]
+        pub no_budget_check: TemplateChild<gtk::CheckButton>,
 
         #[template_child]
         pub group_icon_picker_button: TemplateChild<gtk::Button>,
 
         pub current_emoji: RefCell<String>,
+        pub budget: RefCell<Budget>,
         pub edit_group: OnceCell<Group>,
     }
 
@@ -105,7 +118,9 @@ mod imp {
             }
 
             obj.connect_key_event_controller();
-            obj.connect_add_button_to_entry_size();
+            obj.connect_budget_entry_changes();
+            obj.connect_constraints_for_confirm_button();
+            obj.listen_no_budget_check_button();
         }
     }
 
@@ -147,11 +162,45 @@ impl GroupDialog {
         }
     }
 
+    #[template_callback]
+    fn increase_budget(&self) {
+        self.imp().budget.replace_with(|budget| Budget::Some(*budget.get_value().unwrap() + 1.0));
+
+        if !self.imp().decrease_budget_button.is_sensitive() {
+            self.imp().decrease_budget_button.set_sensitive(true);
+        }
+
+        self.imp()
+            .group_budget
+            .set_buffer(&gtk::EntryBuffer::new(Some(&format!(
+                "{:.2}",
+                &self.imp().budget.borrow().get_value().unwrap_or(&0.0)
+            ))))
+    }
+
+    #[template_callback]
+    fn decrease_budget(&self) {
+        self.imp().budget.replace_with(|budget| Budget::Some(*budget.get_value().unwrap() - 1.0));
+
+        if self.imp().budget.borrow().get_value().unwrap().le(&0.0) {
+            self.imp().budget.replace_with(|_| Budget::Some(0.1));
+            self.imp().decrease_budget_button.set_sensitive(false);
+        }
+
+        self.imp()
+            .group_budget
+            .set_buffer(&gtk::EntryBuffer::new(Some(&format!(
+                "{:.2}",
+                &self.imp().budget.borrow().get_value().unwrap_or(&0.0)
+            ))));
+    }
+
     fn create_group(&self) {
         let group = Group::new(
             &self.imp().current_emoji.borrow(),
             self.imp().group_color.rgba(),
             &self.imp().group_name.text(),
+            self.imp().budget.borrow().clone(),
         );
 
         let application = application!(self @as crate::BeedgetApplication);
@@ -180,6 +229,9 @@ impl GroupDialog {
             .label()
             .expect("No group emoji selected");
         group.set_property("emoji", emoji.to_value());
+
+        let budget = self.imp().budget.borrow();
+        group.set_budget(&budget);
 
         application!(self @as crate::BeedgetApplication)
             .data()
@@ -219,8 +271,8 @@ impl GroupDialog {
         emoji_picker.popup();
     }
 
-    /// Disables button if name entry is empty
-    fn connect_add_button_to_entry_size(&self) {
+    /// Disables button if name and/or amount entries are empty
+    fn connect_constraints_for_confirm_button(&self) {
         // Set initial
         self.imp()
             .add_button
@@ -232,6 +284,35 @@ impl GroupDialog {
                 parent.imp().add_button.set_sensitive(parent.imp().group_name.text_length() > 0);
             }),
         );
+    }
+
+    fn connect_budget_entry_changes(&self) {
+        self.imp().group_budget.connect_text_notify(
+            glib::clone!(@weak self as parent => move |_| {
+                match parent.imp().group_budget.text().to_string().parse::<f32>() {
+                    Ok(val) => {
+                        parent.imp().budget.replace(Budget::Some(val));
+                    },
+                    Err(_) => {
+                        let current_val = parent.imp().budget.borrow().get_value().unwrap_or(&0.1).clone();
+                        parent.imp().group_budget.set_text(&current_val.to_string());
+                    },
+                };
+            }),
+        );
+    }
+
+    /// Disable budget widgets if "no budget" is selected
+    fn listen_no_budget_check_button(&self) {
+        self.imp()
+            .no_budget_check
+            .connect_toggled(glib::clone!(@weak self as parent => move |_| {
+                let checked = parent.imp().no_budget_check.is_active();
+
+                parent.imp().group_budget.set_sensitive(!checked);
+                parent.imp().increase_budget_button.set_sensitive(!checked);
+                parent.imp().decrease_budget_button.set_sensitive(!checked);
+            }));
     }
 
     /// Handle keyboard events
